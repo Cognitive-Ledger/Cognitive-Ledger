@@ -1,17 +1,14 @@
 import { TrendingUp, Cpu, Scale } from "lucide-react";
 
-interface ImpactLevel {
-  level: "low" | "medium" | "high";
-  description: string;
-}
+type Level = "low" | "medium" | "high";
 
 interface AIImpactPanelProps {
-  businessImpact: ImpactLevel;
-  technicalImpact: ImpactLevel;
-  ethicalRisk: ImpactLevel;
+  businessImpact: Level;
+  technicalImpact: Level;
+  ethicalRisk: Level;
 }
 
-function getImpactStyles(level: "low" | "medium" | "high") {
+function getImpactStyles(level: Level) {
   switch (level) {
     case "low":
       return "impact-low";
@@ -22,8 +19,29 @@ function getImpactStyles(level: "low" | "medium" | "high") {
   }
 }
 
-function getImpactLabel(level: "low" | "medium" | "high") {
+function getImpactLabel(level: Level) {
   return level.charAt(0).toUpperCase() + level.slice(1);
+}
+
+function getImpactDescription(type: string, level: Level) {
+  const descriptions: Record<string, Record<Level, string>> = {
+    business: {
+      low: "Minimal immediate market or operational changes expected.",
+      medium: "Moderate shifts in industry practices or business models.",
+      high: "Significant disruption to markets, jobs, or business operations.",
+    },
+    technical: {
+      low: "Incremental advancement in existing capabilities.",
+      medium: "Notable improvement in performance or new capabilities.",
+      high: "Breakthrough advancement that redefines the state of the art.",
+    },
+    ethical: {
+      low: "Standard considerations with established best practices.",
+      medium: "Requires careful consideration of potential misuse or bias.",
+      high: "Significant concerns around safety, privacy, or societal impact.",
+    },
+  };
+  return descriptions[type]?.[level] ?? "";
 }
 
 export function AIImpactPanel({
@@ -46,13 +64,13 @@ export function AIImpactPanel({
           </div>
           <div
             className={`inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider border ${getImpactStyles(
-              businessImpact.level
+              businessImpact
             )}`}
           >
-            {getImpactLabel(businessImpact.level)}
+            {getImpactLabel(businessImpact)}
           </div>
           <p className="text-xs text-caption leading-relaxed">
-            {businessImpact.description}
+            {getImpactDescription("business", businessImpact)}
           </p>
         </div>
 
@@ -64,13 +82,13 @@ export function AIImpactPanel({
           </div>
           <div
             className={`inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider border ${getImpactStyles(
-              technicalImpact.level
+              technicalImpact
             )}`}
           >
-            {getImpactLabel(technicalImpact.level)}
+            {getImpactLabel(technicalImpact)}
           </div>
           <p className="text-xs text-caption leading-relaxed">
-            {technicalImpact.description}
+            {getImpactDescription("technical", technicalImpact)}
           </p>
         </div>
 
@@ -82,13 +100,13 @@ export function AIImpactPanel({
           </div>
           <div
             className={`inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider border ${getImpactStyles(
-              ethicalRisk.level
+              ethicalRisk
             )}`}
           >
-            {getImpactLabel(ethicalRisk.level)}
+            {getImpactLabel(ethicalRisk)}
           </div>
           <p className="text-xs text-caption leading-relaxed">
-            {ethicalRisk.description}
+            {getImpactDescription("ethical", ethicalRisk)}
           </p>
         </div>
       </div>

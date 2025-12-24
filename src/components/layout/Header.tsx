@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Menu, X, Search } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Menu, X, Search, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 const navigation = [
   { name: "Front Page", href: "/" },
@@ -17,6 +18,13 @@ const navigation = [
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <header className="border-b border-divider bg-background sticky top-0 z-50">
@@ -35,9 +43,26 @@ export function Header() {
             <Button variant="ghost" size="sm" className="text-xs font-medium">
               Subscribe
             </Button>
-            <Button variant="ghost" size="sm" className="text-xs font-medium">
-              Sign In
-            </Button>
+            {user ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs font-medium flex items-center gap-1"
+                onClick={handleSignOut}
+              >
+                <LogOut className="h-3 w-3" />
+                Sign Out
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs font-medium"
+                onClick={() => navigate("/auth")}
+              >
+                Sign In
+              </Button>
+            )}
           </div>
         </div>
       </div>
