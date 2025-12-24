@@ -4,16 +4,31 @@ import { Layout } from "@/components/layout/Layout";
 import { AIImpactPanel } from "@/components/articles/AIImpactPanel";
 import { ReadingModeToggle } from "@/components/articles/ReadingModeToggle";
 import { ArticleCard } from "@/components/articles/ArticleCard";
-import { mockArticles } from "@/data/mockArticles";
+import { useArticle, useArticles } from "@/hooks/useArticles";
 import { Clock, ArrowLeft, Share2, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet-async";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ArticlePage() {
   const { slug } = useParams<{ slug: string }>();
   const [readingMode, setReadingMode] = useState<"simple" | "technical">("simple");
 
-  const article = mockArticles.find((a) => a.slug === slug);
+  const { data: article, isLoading } = useArticle(slug ?? "");
+  const { data: allArticles } = useArticles();
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container py-8">
+          <Skeleton className="h-8 w-32 mb-8" />
+          <Skeleton className="h-12 w-3/4 mb-4" />
+          <Skeleton className="h-6 w-1/2 mb-8" />
+          <Skeleton className="h-96 w-full" />
+        </div>
+      </Layout>
+    );
+  }
 
   if (!article) {
     return (
@@ -31,19 +46,43 @@ export default function ArticlePage() {
     );
   }
 
-  const relatedArticles = mockArticles
-    .filter((a) => a.slug !== slug && a.category === article.category)
-    .slice(0, 3);
+  const relatedArticles = allArticles
+    ?.filter((a) => a.slug !== slug && a.category === article.category)
+    .slice(0, 3) ?? [];
+
+  const transformArticle = (a: typeof article) => ({
+    slug: a!.slug,
+    headline: a!.title,
+    excerpt: a!.excerpt,
+    category: a!.category.charAt(0).toUpperCase() + a!.category.slice(1),
+    author: a!.author,
+    date: new Date(a!.published_at).toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }),
+    readTime: `${a!.reading_time} min read`,
+    imageUrl: a!.image_url ?? undefined,
+    isBreaking: a!.is_breaking,
+    isFeatured: a!.is_featured,
+    businessImpact: (a!.business_impact as "low" | "medium" | "high") ?? "medium",
+    technicalImpact: (a!.technical_impact as "low" | "medium" | "high") ?? "medium",
+    ethicalRisk: (a!.ethical_risk as "low" | "medium" | "high") ?? "low",
+  });
+
+  const content = readingMode === "simple" 
+    ? (article.simple_content || article.content) 
+    : (article.technical_content || article.content);
 
   return (
     <>
       <Helmet>
-        <title>{article.headline} — Cognitive Ledger</title>
+        <title>{article.title} — Cognitive Ledger</title>
         <meta name="description" content={article.excerpt} />
-        <meta property="og:title" content={article.headline} />
+        <meta property="og:title" content={article.title} />
         <meta property="og:description" content={article.excerpt} />
         <meta property="og:type" content="article" />
-        {article.imageUrl && <meta property="og:image" content={article.imageUrl} />}
+        {article.image_url && <meta property="og:image" content={article.image_url} />}
       </Helmet>
 
       <Layout>
@@ -62,11 +101,13 @@ export default function ArticlePage() {
           {/* Article Header */}
           <header className="max-w-4xl mb-8">
             <div className="flex items-center gap-3 mb-4">
-              {article.isBreaking && <span className="breaking-badge">Breaking</span>}
-              <span className="category-badge">{article.category}</span>
+              {article.is_breaking && <span className="breaking-badge">Breaking</span>}
+              <span className="category-badge">
+                {article.category.charAt(0).toUpperCase() + article.category.slice(1)}
+              </span>
             </div>
 
-            <h1 className="headline-hero mb-6">{article.headline}</h1>
+            <h1 className="headline-hero mb-6">{article.title}</h1>
 
             <p className="text-xl text-body-text leading-relaxed mb-6">
               {article.excerpt}
@@ -75,11 +116,17 @@ export default function ArticlePage() {
             <div className="flex flex-wrap items-center gap-4 text-sm text-caption border-y border-divider py-4">
               <span className="font-medium text-foreground">{article.author}</span>
               <span>·</span>
-              <span>{article.date}</span>
+              <span>
+                {new Date(article.published_at).toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
               <span>·</span>
               <span className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
-                {article.readTime}
+                {article.reading_time} min read
               </span>
               <div className="flex-1" />
               <div className="flex items-center gap-2">
@@ -94,11 +141,11 @@ export default function ArticlePage() {
           </header>
 
           {/* Article Image */}
-          {article.imageUrl && (
+          {article.image_url && (
             <figure className="max-w-4xl mb-8">
               <img
-                src={article.imageUrl}
-                alt={article.headline}
+                src={article.image_url}
+                alt={article.title}
                 className="w-full aspect-[16/9] object-cover"
               />
               <figcaption className="text-xs text-caption mt-2">
@@ -112,44 +159,44 @@ export default function ArticlePage() {
             {/* Article Body */}
             <div className="lg:col-span-8">
               {/* Reading Mode Toggle */}
-              <div className="mb-8">
-                <ReadingModeToggle mode={readingMode} onModeChange={setReadingMode} />
-              </div>
+              {(article.simple_content || article.technical_content) && (
+                <div className="mb-8">
+                  <ReadingModeToggle mode={readingMode} onModeChange={setReadingMode} />
+                </div>
+              )}
 
               {/* Article Content */}
               <div className="prose prose-lg max-w-none">
-                {(readingMode === "simple" ? article.simpleContent : article.technicalContent)
-                  .split("\n\n")
-                  .map((paragraph, index) => {
-                    if (paragraph.startsWith("**") && paragraph.includes(":**")) {
-                      const [title, ...content] = paragraph.split(":");
-                      return (
-                        <div key={index} className="mb-6">
-                          <h3 className="font-serif text-lg font-semibold mb-2">
-                            {title.replace(/\*\*/g, "")}
-                          </h3>
-                          <p className="body-text">{content.join(":").trim()}</p>
-                        </div>
-                      );
-                    }
-                    if (paragraph.startsWith("- ")) {
-                      const items = paragraph.split("\n").filter((l) => l.startsWith("- "));
-                      return (
-                        <ul key={index} className="list-disc list-inside mb-6 space-y-1">
-                          {items.map((item, i) => (
-                            <li key={i} className="body-text">
-                              {item.replace("- ", "")}
-                            </li>
-                          ))}
-                        </ul>
-                      );
-                    }
+                {content.split("\n\n").map((paragraph, index) => {
+                  if (paragraph.startsWith("**") && paragraph.includes(":**")) {
+                    const [title, ...contentParts] = paragraph.split(":");
                     return (
-                      <p key={index} className="body-text mb-6">
-                        {paragraph}
-                      </p>
+                      <div key={index} className="mb-6">
+                        <h3 className="font-serif text-lg font-semibold mb-2">
+                          {title.replace(/\*\*/g, "")}
+                        </h3>
+                        <p className="body-text">{contentParts.join(":").trim()}</p>
+                      </div>
                     );
-                  })}
+                  }
+                  if (paragraph.startsWith("- ")) {
+                    const items = paragraph.split("\n").filter((l) => l.startsWith("- "));
+                    return (
+                      <ul key={index} className="list-disc list-inside mb-6 space-y-1">
+                        {items.map((item, i) => (
+                          <li key={i} className="body-text">
+                            {item.replace("- ", "")}
+                          </li>
+                        ))}
+                      </ul>
+                    );
+                  }
+                  return (
+                    <p key={index} className="body-text mb-6">
+                      {paragraph}
+                    </p>
+                  );
+                })}
               </div>
 
               {/* Tags */}
@@ -173,9 +220,9 @@ export default function ArticlePage() {
             {/* Sidebar */}
             <aside className="lg:col-span-4 space-y-8">
               <AIImpactPanel
-                businessImpact={article.businessImpact}
-                technicalImpact={article.technicalImpact}
-                ethicalRisk={article.ethicalRisk}
+                businessImpact={(article.business_impact as "low" | "medium" | "high") ?? "medium"}
+                technicalImpact={(article.technical_impact as "low" | "medium" | "high") ?? "medium"}
+                ethicalRisk={(article.ethical_risk as "low" | "medium" | "high") ?? "low"}
               />
 
               {/* Related Articles */}
@@ -186,7 +233,7 @@ export default function ArticlePage() {
                   </h4>
                   <div className="space-y-4">
                     {relatedArticles.map((a) => (
-                      <ArticleCard key={a.slug} {...a} variant="sidebar" />
+                      <ArticleCard key={a.slug} {...transformArticle(a)} variant="sidebar" />
                     ))}
                   </div>
                 </div>

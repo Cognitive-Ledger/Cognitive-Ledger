@@ -14,7 +14,192 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ai_models: {
+        Row: {
+          benchmarks: Json | null
+          category: string
+          context_window: string | null
+          created_at: string
+          description: string
+          id: string
+          name: string
+          parameters: string | null
+          pricing: string | null
+          provider: string
+          release_date: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          benchmarks?: Json | null
+          category: string
+          context_window?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          name: string
+          parameters?: string | null
+          pricing?: string | null
+          provider: string
+          release_date: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          benchmarks?: Json | null
+          category?: string
+          context_window?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          parameters?: string | null
+          pricing?: string | null
+          provider?: string
+          release_date?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      articles: {
+        Row: {
+          author: string
+          business_impact: Database["public"]["Enums"]["impact_level"] | null
+          category: Database["public"]["Enums"]["article_category"]
+          content: string
+          created_at: string
+          ethical_risk: Database["public"]["Enums"]["impact_level"] | null
+          excerpt: string
+          id: string
+          image_url: string | null
+          is_breaking: boolean
+          is_featured: boolean
+          published_at: string
+          reading_time: number
+          simple_content: string | null
+          slug: string
+          technical_content: string | null
+          technical_impact: Database["public"]["Enums"]["impact_level"] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author: string
+          business_impact?: Database["public"]["Enums"]["impact_level"] | null
+          category: Database["public"]["Enums"]["article_category"]
+          content: string
+          created_at?: string
+          ethical_risk?: Database["public"]["Enums"]["impact_level"] | null
+          excerpt: string
+          id?: string
+          image_url?: string | null
+          is_breaking?: boolean
+          is_featured?: boolean
+          published_at?: string
+          reading_time?: number
+          simple_content?: string | null
+          slug: string
+          technical_content?: string | null
+          technical_impact?: Database["public"]["Enums"]["impact_level"] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author?: string
+          business_impact?: Database["public"]["Enums"]["impact_level"] | null
+          category?: Database["public"]["Enums"]["article_category"]
+          content?: string
+          created_at?: string
+          ethical_risk?: Database["public"]["Enums"]["impact_level"] | null
+          excerpt?: string
+          id?: string
+          image_url?: string | null
+          is_breaking?: boolean
+          is_featured?: boolean
+          published_at?: string
+          reading_time?: number
+          simple_content?: string | null
+          slug?: string
+          technical_content?: string | null
+          technical_impact?: Database["public"]["Enums"]["impact_level"] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      breaking_news: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+        }
+        Relationships: []
+      }
+      daily_brief_items: {
+        Row: {
+          brief_date: string
+          content: string
+          created_at: string
+          id: string
+          order_index: number
+        }
+        Insert: {
+          brief_date?: string
+          content: string
+          created_at?: string
+          id?: string
+          order_index?: number
+        }
+        Update: {
+          brief_date?: string
+          content?: string
+          created_at?: string
+          id?: string
+          order_index?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +208,15 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      article_category:
+        | "breaking"
+        | "research"
+        | "companies"
+        | "policy"
+        | "models"
+        | "opinion"
+        | "explainers"
+      impact_level: "low" | "medium" | "high"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +343,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      article_category: [
+        "breaking",
+        "research",
+        "companies",
+        "policy",
+        "models",
+        "opinion",
+        "explainers",
+      ],
+      impact_level: ["low", "medium", "high"],
+    },
   },
 } as const

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { ModelCard } from "@/components/ai-index/ModelCard";
-import { mockModels } from "@/data/mockModels";
+import { useModels } from "@/hooks/useModels";
 import { Search, Filter } from "lucide-react";
 import { Helmet } from "react-helmet-async";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const providers = ["All", "OpenAI", "Anthropic", "Google DeepMind", "Meta", "Mistral AI", "xAI"];
 
@@ -11,7 +12,9 @@ export default function AIIndex() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProvider, setSelectedProvider] = useState("All");
 
-  const filteredModels = mockModels.filter((model) => {
+  const { data: models, isLoading } = useModels();
+
+  const filteredModels = (models ?? []).filter((model) => {
     const matchesSearch =
       model.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       model.provider.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -22,6 +25,40 @@ export default function AIIndex() {
 
     return matchesSearch && matchesProvider;
   });
+
+  const transformModel = (model: typeof filteredModels[0]) => ({
+    slug: model.id,
+    name: model.name,
+    provider: model.provider,
+    version: model.version,
+    releaseDate: new Date(model.release_date).toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    }),
+    description: model.description,
+    parameters: model.parameters ?? undefined,
+    contextWindow: model.context_window ?? undefined,
+    pricing: model.pricing ?? undefined,
+    category: model.category,
+    benchmarks: model.benchmarks ?? undefined,
+  });
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container py-8">
+          <Skeleton className="h-12 w-64 mb-4" />
+          <Skeleton className="h-6 w-96 mb-8" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Skeleton className="h-64" />
+            <Skeleton className="h-64" />
+            <Skeleton className="h-64" />
+            <Skeleton className="h-64" />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <>
@@ -82,18 +119,25 @@ export default function AIIndex() {
           {/* Results Count */}
           <div className="mb-6">
             <p className="text-sm text-caption">
-              Showing {filteredModels.length} of {mockModels.length} models
+              Showing {filteredModels.length} of {models?.length ?? 0} models
             </p>
           </div>
 
           {/* Model Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-            {filteredModels.map((model) => (
-              <ModelCard key={model.slug} {...model} />
-            ))}
-          </div>
-
-          {filteredModels.length === 0 && (
+          {filteredModels.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+              {filteredModels.map((model) => (
+                <ModelCard key={model.id} {...transformModel(model)} />
+              ))}
+            </div>
+          ) : models && models.length === 0 ? (
+            <div className="text-center py-16 border border-divider">
+              <h3 className="headline-tertiary mb-2">No Models Yet</h3>
+              <p className="text-body-text">
+                AI models will be listed here once they are added to the index.
+              </p>
+            </div>
+          ) : (
             <div className="text-center py-16 border border-divider">
               <h3 className="headline-tertiary mb-2">No models found</h3>
               <p className="text-body-text">
