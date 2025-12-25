@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, GripVertical, ExternalLink } from "lucide-react";
+import { Plus, Trash2, GripVertical, ExternalLink, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 import type { Embed } from "@/components/articles/EmbedRenderer";
 
 interface EmbedEditorProps {
@@ -32,6 +33,8 @@ function generateId() {
 
 export function EmbedEditor({ embeds, onChange }: EmbedEditorProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const addEmbed = () => {
     const newEmbed: Embed = {
@@ -65,10 +68,26 @@ export function EmbedEditor({ embeds, onChange }: EmbedEditorProps) {
     onChange(newEmbeds);
   };
 
+  const copyMarker = async (id: string) => {
+    const marker = `{{embed:${id}}}`;
+    await navigator.clipboard.writeText(marker);
+    setCopiedId(id);
+    toast({
+      title: "Marker copied",
+      description: "Paste this marker in your article content where you want the embed to appear.",
+    });
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">Embedded Content</CardTitle>
+        <div>
+          <CardTitle className="text-base">Embedded Content</CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Copy the marker and paste it in your article content to position the embed
+          </p>
+        </div>
         <Button type="button" variant="outline" size="sm" onClick={addEmbed}>
           <Plus className="h-4 w-4 mr-1" />
           Add Embed
@@ -110,6 +129,20 @@ export function EmbedEditor({ embeds, onChange }: EmbedEditorProps) {
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => copyMarker(embed.id)}
+                  >
+                    {copiedId === embed.id ? (
+                      <Check className="h-3 w-3 mr-1" />
+                    ) : (
+                      <Copy className="h-3 w-3 mr-1" />
+                    )}
+                    Copy Marker
+                  </Button>
                   <Button
                     type="button"
                     variant="ghost"
@@ -215,6 +248,11 @@ export function EmbedEditor({ embeds, onChange }: EmbedEditorProps) {
                       min={100}
                       max={1000}
                     />
+                  </div>
+                  <div className="md:col-span-2 bg-muted/50 p-2 rounded text-xs text-muted-foreground">
+                    <strong>Marker:</strong>{" "}
+                    <code className="bg-background px-1 py-0.5 rounded">{`{{embed:${embed.id}}}`}</code>
+                    <span className="ml-2">— Paste this in your content where you want this embed</span>
                   </div>
                 </div>
               )}
