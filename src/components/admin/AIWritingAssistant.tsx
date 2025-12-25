@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Sparkles, Copy, Check } from "lucide-react";
+import { Loader2, Sparkles, Copy, Check, PenTool, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -19,7 +19,9 @@ type AssistAction =
   | "simplify"
   | "make-technical"
   | "generate-excerpt"
-  | "improve-writing";
+  | "improve-writing"
+  | "write-article"
+  | "deep-research";
 
 interface AIWritingAssistantProps {
   currentContent: string;
@@ -27,14 +29,24 @@ interface AIWritingAssistantProps {
 }
 
 export function AIWritingAssistant({ currentContent, onInsertContent }: AIWritingAssistantProps) {
-  const [action, setAction] = useState<AssistAction>("generate-outline");
+  const [action, setAction] = useState<AssistAction>("write-article");
   const [prompt, setPrompt] = useState("");
   const [result, setResult] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
-  const actionLabels: Record<AssistAction, { label: string; description: string }> = {
+  const actionLabels: Record<AssistAction, { label: string; description: string; icon?: React.ReactNode }> = {
+    "write-article": {
+      label: "✍️ Write Article",
+      description: "Generate a complete article from a topic or prompt",
+      icon: <PenTool className="h-4 w-4" />,
+    },
+    "deep-research": {
+      label: "🔍 Deep Research",
+      description: "Research the web and write a well-sourced article",
+      icon: <Globe className="h-4 w-4" />,
+    },
     "generate-outline": {
       label: "Generate Outline",
       description: "Create an article outline from a topic or idea",
@@ -62,7 +74,17 @@ export function AIWritingAssistant({ currentContent, onInsertContent }: AIWritin
   };
 
   const handleGenerate = async () => {
-    if (!prompt.trim() && action !== "simplify" && action !== "make-technical" && action !== "generate-excerpt" && action !== "improve-writing") {
+    // For article writing actions, prompt is required
+    if (action === "write-article" || action === "deep-research") {
+      if (!prompt.trim()) {
+        toast({
+          title: "Topic required",
+          description: "Please enter a topic or prompt for the article",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else if (!prompt.trim() && action !== "simplify" && action !== "make-technical" && action !== "generate-excerpt" && action !== "improve-writing") {
       toast({
         title: "Input required",
         description: "Please enter a topic or content to work with",
@@ -94,6 +116,13 @@ export function AIWritingAssistant({ currentContent, onInsertContent }: AIWritin
       }
 
       setResult(response.data.result);
+      
+      toast({
+        title: action === "deep-research" ? "Research complete" : "Content generated",
+        description: action === "deep-research" 
+          ? "Article generated with web research" 
+          : "AI has generated your content",
+      });
     } catch (error) {
       console.error("AI assist error:", error);
       toast({
@@ -124,6 +153,35 @@ export function AIWritingAssistant({ currentContent, onInsertContent }: AIWritin
     });
   };
 
+  const getPlaceholder = () => {
+    switch (action) {
+      case "write-article":
+        return "Enter the topic, headline, or detailed prompt for your article...\n\nExample: \"The impact of GPT-5 on software development workflows\"";
+      case "deep-research":
+        return "Enter the topic to research and write about...\n\nExample: \"Latest developments in multimodal AI models 2024\"";
+      case "generate-outline":
+        return "Enter a topic or idea for the article...";
+      case "expand-section":
+        return "Enter the section or topic to expand...";
+      default:
+        return "Leave empty to use current article content, or paste specific text...";
+    }
+  };
+
+  const getButtonLabel = () => {
+    if (isLoading) {
+      return action === "deep-research" ? "Researching..." : "Generating...";
+    }
+    switch (action) {
+      case "write-article":
+        return "Write Article";
+      case "deep-research":
+        return "Research & Write";
+      default:
+        return "Generate";
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -142,11 +200,18 @@ export function AIWritingAssistant({ currentContent, onInsertContent }: AIWritin
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(actionLabels).map(([key, { label }]) => (
-                <SelectItem key={key} value={key}>
-                  {label}
-                </SelectItem>
-              ))}
+              <SelectItem value="write-article" className="font-medium">
+                ✍️ Write Article
+              </SelectItem>
+              <SelectItem value="deep-research" className="font-medium">
+                🔍 Deep Research
+              </SelectItem>
+              <SelectItem value="generate-outline">Generate Outline</SelectItem>
+              <SelectItem value="expand-section">Expand Section</SelectItem>
+              <SelectItem value="simplify">Simplify Content</SelectItem>
+              <SelectItem value="make-technical">Make Technical</SelectItem>
+              <SelectItem value="generate-excerpt">Generate Excerpt</SelectItem>
+              <SelectItem value="improve-writing">Improve Writing</SelectItem>
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground mt-1">
@@ -155,39 +220,47 @@ export function AIWritingAssistant({ currentContent, onInsertContent }: AIWritin
         </div>
 
         <Textarea
-          placeholder={
-            action === "generate-outline"
-              ? "Enter a topic or idea for the article..."
-              : action === "expand-section"
-              ? "Enter the section or topic to expand..."
-              : "Leave empty to use current article content, or paste specific text..."
-          }
+          placeholder={getPlaceholder()}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          rows={4}
+          rows={action === "write-article" || action === "deep-research" ? 6 : 4}
+          className={action === "deep-research" ? "border-primary/50" : ""}
         />
 
         <Button 
           onClick={handleGenerate} 
           disabled={isLoading}
           className="w-full"
+          variant={action === "deep-research" ? "default" : "default"}
         >
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Generating...
+              {getButtonLabel()}
             </>
           ) : (
             <>
-              <Sparkles className="mr-2 h-4 w-4" />
-              Generate
+              {action === "deep-research" ? (
+                <Globe className="mr-2 h-4 w-4" />
+              ) : action === "write-article" ? (
+                <PenTool className="mr-2 h-4 w-4" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
+              {getButtonLabel()}
             </>
           )}
         </Button>
 
+        {action === "deep-research" && (
+          <p className="text-xs text-muted-foreground text-center">
+            Searches Wikipedia, Hacker News, and arXiv for research data
+          </p>
+        )}
+
         {result && (
           <div className="space-y-2">
-            <div className="bg-muted rounded-lg p-4 max-h-64 overflow-y-auto">
+            <div className="bg-muted rounded-lg p-4 max-h-96 overflow-y-auto">
               <pre className="whitespace-pre-wrap text-sm font-sans">
                 {result}
               </pre>
