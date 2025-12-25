@@ -21,6 +21,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Save } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { EmbedEditor } from "@/components/admin/EmbedEditor";
+import type { Embed } from "@/components/articles/EmbedRenderer";
 import type { Database } from "@/integrations/supabase/types";
 
 type ArticleCategory = Database["public"]["Enums"]["article_category"];
@@ -54,6 +56,7 @@ interface ArticleForm {
   business_impact: ImpactLevel;
   technical_impact: ImpactLevel;
   ethical_risk: ImpactLevel;
+  embeds: Embed[];
 }
 
 const initialForm: ArticleForm = {
@@ -72,6 +75,7 @@ const initialForm: ArticleForm = {
   business_impact: "medium",
   technical_impact: "medium",
   ethical_risk: "low",
+  embeds: [],
 };
 
 export default function ArticleEditor() {
@@ -123,6 +127,7 @@ export default function ArticleEditor() {
         business_impact: data.business_impact || "medium",
         technical_impact: data.technical_impact || "medium",
         ethical_risk: data.ethical_risk || "low",
+        embeds: (data.embeds as unknown as Embed[]) || [],
       });
     }
     setIsLoading(false);
@@ -173,6 +178,7 @@ export default function ArticleEditor() {
       business_impact: form.business_impact,
       technical_impact: form.technical_impact,
       ethical_risk: form.ethical_risk,
+      embeds: form.embeds as unknown as Database["public"]["Tables"]["articles"]["Insert"]["embeds"],
     };
 
     let error;
@@ -333,6 +339,12 @@ export default function ArticleEditor() {
                   </Tabs>
                 </CardContent>
               </Card>
+
+              {/* Embeds Section */}
+              <EmbedEditor
+                embeds={form.embeds}
+                onChange={(embeds) => setForm((prev) => ({ ...prev, embeds }))}
+              />
             </div>
 
             <div className="space-y-6">
