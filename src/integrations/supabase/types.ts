@@ -78,8 +78,10 @@ export type Database = {
           is_featured: boolean
           published_at: string
           reading_time: number
+          scheduled_for: string | null
           simple_content: string | null
           slug: string
+          status: string | null
           technical_content: string | null
           technical_impact: Database["public"]["Enums"]["impact_level"] | null
           title: string
@@ -100,8 +102,10 @@ export type Database = {
           is_featured?: boolean
           published_at?: string
           reading_time?: number
+          scheduled_for?: string | null
           simple_content?: string | null
           slug: string
+          status?: string | null
           technical_content?: string | null
           technical_impact?: Database["public"]["Enums"]["impact_level"] | null
           title: string
@@ -122,8 +126,10 @@ export type Database = {
           is_featured?: boolean
           published_at?: string
           reading_time?: number
+          scheduled_for?: string | null
           simple_content?: string | null
           slug?: string
+          status?: string | null
           technical_content?: string | null
           technical_impact?: Database["public"]["Enums"]["impact_level"] | null
           title?: string

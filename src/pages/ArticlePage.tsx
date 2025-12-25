@@ -62,7 +62,7 @@ function ArticleContent({ content, embeds }: { content: string; embeds: Embed[] 
 
 export default function ArticlePage() {
   const { slug } = useParams<{ slug: string }>();
-  const [readingMode, setReadingMode] = useState<"simple" | "technical">("simple");
+  const [readingMode, setReadingMode] = useState<"standard" | "simple" | "technical">("standard");
 
   const { data: article, isLoading } = useArticle(slug ?? "");
   const { data: allArticles } = useArticles();
@@ -122,7 +122,9 @@ export default function ArticlePage() {
 
   const content = readingMode === "simple" 
     ? (article.simple_content || article.content) 
-    : (article.technical_content || article.content);
+    : readingMode === "technical"
+    ? (article.technical_content || article.content)
+    : article.content;
 
   return (
     <>
