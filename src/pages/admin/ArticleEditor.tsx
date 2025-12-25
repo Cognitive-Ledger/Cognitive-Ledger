@@ -19,9 +19,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Eye, Edit2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { EmbedEditor } from "@/components/admin/EmbedEditor";
+import { ArticlePreview } from "@/components/admin/ArticlePreview";
+import { AIWritingAssistant } from "@/components/admin/AIWritingAssistant";
 import type { Embed } from "@/components/articles/EmbedRenderer";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -88,6 +90,21 @@ export default function ArticleEditor() {
   const [form, setForm] = useState<ArticleForm>(initialForm);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
+  const [activeContentTab, setActiveContentTab] = useState("main");
+
+  const handleAIInsert = (content: string) => {
+    const fieldMap: Record<string, keyof ArticleForm> = {
+      main: "content",
+      simple: "simple_content",
+      technical: "technical_content",
+    };
+    const field = fieldMap[activeContentTab] || "content";
+    setForm((prev) => ({
+      ...prev,
+      [field]: prev[field as keyof ArticleForm] + "\n\n" + content,
+    }));
+  };
 
   useEffect(() => {
     if (isEditing) {
@@ -246,111 +263,154 @@ export default function ArticleEditor() {
                 {isEditing ? "Edit Article" : "New Article"}
               </h1>
             </div>
-            <Button type="submit" disabled={isSaving}>
-              <Save className="w-4 h-4 mr-2" />
-              {isSaving ? "Saving..." : "Save Article"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant={viewMode === "edit" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("edit")}
+              >
+                <Edit2 className="w-4 h-4 mr-2" />
+                Edit
+              </Button>
+              <Button
+                type="button"
+                variant={viewMode === "preview" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("preview")}
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                Preview
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                <Save className="w-4 h-4 mr-2" />
+                {isSaving ? "Saving..." : "Save Article"}
+              </Button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Article Content</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="title">Title *</Label>
-                    <Input
-                      id="title"
-                      value={form.title}
-                      onChange={(e) => handleTitleChange(e.target.value)}
-                      placeholder="Enter article title"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="slug">Slug *</Label>
-                    <Input
-                      id="slug"
-                      value={form.slug}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, slug: e.target.value }))
-                      }
-                      placeholder="article-url-slug"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="excerpt">Excerpt *</Label>
-                    <Textarea
-                      id="excerpt"
-                      value={form.excerpt}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, excerpt: e.target.value }))
-                      }
-                      placeholder="Brief summary of the article"
-                      rows={3}
-                    />
-                  </div>
-
-                  <Tabs defaultValue="main">
-                    <TabsList>
-                      <TabsTrigger value="main">Main Content *</TabsTrigger>
-                      <TabsTrigger value="simple">Simple Version</TabsTrigger>
-                      <TabsTrigger value="technical">Technical Version</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="main">
-                      <Textarea
-                        value={form.content}
-                        onChange={(e) =>
-                          setForm((prev) => ({ ...prev, content: e.target.value }))
-                        }
-                        placeholder="Main article content (supports markdown)"
-                        rows={15}
+          {viewMode === "preview" ? (
+            <ArticlePreview
+              title={form.title}
+              excerpt={form.excerpt}
+              content={form.content}
+              author={form.author}
+              category={form.category}
+              image_url={form.image_url}
+              reading_time={form.reading_time}
+              is_breaking={form.is_breaking}
+              is_featured={form.is_featured}
+              business_impact={form.business_impact}
+              technical_impact={form.technical_impact}
+              ethical_risk={form.ethical_risk}
+              embeds={form.embeds}
+            />
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Article Content</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="title">Title *</Label>
+                      <Input
+                        id="title"
+                        value={form.title}
+                        onChange={(e) => handleTitleChange(e.target.value)}
+                        placeholder="Enter article title"
                       />
-                    </TabsContent>
-                    <TabsContent value="simple">
-                      <Textarea
-                        value={form.simple_content}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            simple_content: e.target.value,
-                          }))
-                        }
-                        placeholder="Simplified version for non-technical readers"
-                        rows={15}
-                      />
-                    </TabsContent>
-                    <TabsContent value="technical">
-                      <Textarea
-                        value={form.technical_content}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            technical_content: e.target.value,
-                          }))
-                        }
-                        placeholder="Technical deep-dive for expert readers"
-                        rows={15}
-                      />
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
+                    </div>
 
-              {/* Embeds Section */}
-              <EmbedEditor
-                embeds={form.embeds}
-                onChange={(embeds) => setForm((prev) => ({ ...prev, embeds }))}
-              />
-            </div>
+                    <div>
+                      <Label htmlFor="slug">Slug *</Label>
+                      <Input
+                        id="slug"
+                        value={form.slug}
+                        onChange={(e) =>
+                          setForm((prev) => ({ ...prev, slug: e.target.value }))
+                        }
+                        placeholder="article-url-slug"
+                      />
+                    </div>
 
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Settings</CardTitle>
+                    <div>
+                      <Label htmlFor="excerpt">Excerpt *</Label>
+                      <Textarea
+                        id="excerpt"
+                        value={form.excerpt}
+                        onChange={(e) =>
+                          setForm((prev) => ({ ...prev, excerpt: e.target.value }))
+                        }
+                        placeholder="Brief summary of the article"
+                        rows={3}
+                      />
+                    </div>
+
+                    <Tabs value={activeContentTab} onValueChange={setActiveContentTab}>
+                      <TabsList>
+                        <TabsTrigger value="main">Main Content *</TabsTrigger>
+                        <TabsTrigger value="simple">Simple Version</TabsTrigger>
+                        <TabsTrigger value="technical">Technical Version</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="main">
+                        <Textarea
+                          value={form.content}
+                          onChange={(e) =>
+                            setForm((prev) => ({ ...prev, content: e.target.value }))
+                          }
+                          placeholder="Main article content (supports markdown)"
+                          rows={15}
+                        />
+                      </TabsContent>
+                      <TabsContent value="simple">
+                        <Textarea
+                          value={form.simple_content}
+                          onChange={(e) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              simple_content: e.target.value,
+                            }))
+                          }
+                          placeholder="Simplified version for non-technical readers"
+                          rows={15}
+                        />
+                      </TabsContent>
+                      <TabsContent value="technical">
+                        <Textarea
+                          value={form.technical_content}
+                          onChange={(e) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              technical_content: e.target.value,
+                            }))
+                          }
+                          placeholder="Technical deep-dive for expert readers"
+                          rows={15}
+                        />
+                      </TabsContent>
+                    </Tabs>
+                  </CardContent>
+                </Card>
+
+                {/* Embeds Section */}
+                <EmbedEditor
+                  embeds={form.embeds}
+                  onChange={(embeds) => setForm((prev) => ({ ...prev, embeds }))}
+                />
+              </div>
+
+              <div className="space-y-6">
+                {/* AI Writing Assistant */}
+                <AIWritingAssistant
+                  currentContent={form.content}
+                  onInsertContent={handleAIInsert}
+                />
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Settings</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
@@ -509,6 +569,7 @@ export default function ArticleEditor() {
               </Card>
             </div>
           </div>
+          )}
         </form>
       </AdminLayout>
     </>
