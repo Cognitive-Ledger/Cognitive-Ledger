@@ -19,11 +19,13 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Save, Eye, Edit2 } from "lucide-react";
+import { ArrowLeft, Save, Eye, Edit2, Calendar } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { EmbedEditor } from "@/components/admin/EmbedEditor";
 import { ArticlePreview } from "@/components/admin/ArticlePreview";
 import { AIWritingAssistant } from "@/components/admin/AIWritingAssistant";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
+import { ImageUploader } from "@/components/admin/ImageUploader";
 import type { Embed } from "@/components/articles/EmbedRenderer";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -59,6 +61,8 @@ interface ArticleForm {
   technical_impact: ImpactLevel;
   ethical_risk: ImpactLevel;
   embeds: Embed[];
+  status: "draft" | "scheduled" | "published";
+  scheduled_for: string;
 }
 
 const initialForm: ArticleForm = {
@@ -78,6 +82,8 @@ const initialForm: ArticleForm = {
   technical_impact: "medium",
   ethical_risk: "low",
   embeds: [],
+  status: "draft",
+  scheduled_for: "",
 };
 
 export default function ArticleEditor() {
@@ -145,6 +151,8 @@ export default function ArticleEditor() {
         technical_impact: data.technical_impact || "medium",
         ethical_risk: data.ethical_risk || "low",
         embeds: (data.embeds as unknown as Embed[]) || [],
+        status: (data as any).status || "published",
+        scheduled_for: (data as any).scheduled_for || "",
       });
     }
     setIsLoading(false);
@@ -196,7 +204,9 @@ export default function ArticleEditor() {
       technical_impact: form.technical_impact,
       ethical_risk: form.ethical_risk,
       embeds: form.embeds as unknown as Database["public"]["Tables"]["articles"]["Insert"]["embeds"],
-    };
+      status: form.status,
+      scheduled_for: form.scheduled_for || null,
+    } as any;
 
     let error;
 
@@ -355,39 +365,36 @@ export default function ArticleEditor() {
                         <TabsTrigger value="technical">Technical Version</TabsTrigger>
                       </TabsList>
                       <TabsContent value="main">
-                        <Textarea
-                          value={form.content}
-                          onChange={(e) =>
-                            setForm((prev) => ({ ...prev, content: e.target.value }))
+                        <RichTextEditor
+                          content={form.content}
+                          onChange={(content) =>
+                            setForm((prev) => ({ ...prev, content }))
                           }
-                          placeholder="Main article content (supports markdown)"
-                          rows={15}
+                          placeholder="Main article content..."
                         />
                       </TabsContent>
                       <TabsContent value="simple">
-                        <Textarea
-                          value={form.simple_content}
-                          onChange={(e) =>
+                        <RichTextEditor
+                          content={form.simple_content}
+                          onChange={(content) =>
                             setForm((prev) => ({
                               ...prev,
-                              simple_content: e.target.value,
+                              simple_content: content,
                             }))
                           }
-                          placeholder="Simplified version for non-technical readers"
-                          rows={15}
+                          placeholder="Simplified version for non-technical readers..."
                         />
                       </TabsContent>
                       <TabsContent value="technical">
-                        <Textarea
-                          value={form.technical_content}
-                          onChange={(e) =>
+                        <RichTextEditor
+                          content={form.technical_content}
+                          onChange={(content) =>
                             setForm((prev) => ({
                               ...prev,
-                              technical_content: e.target.value,
+                              technical_content: content,
                             }))
                           }
-                          placeholder="Technical deep-dive for expert readers"
-                          rows={15}
+                          placeholder="Technical deep-dive for expert readers..."
                         />
                       </TabsContent>
                     </Tabs>
@@ -446,17 +453,13 @@ export default function ArticleEditor() {
                     />
                   </div>
 
-                  <div>
-                    <Label htmlFor="image_url">Image URL</Label>
-                    <Input
-                      id="image_url"
-                      value={form.image_url}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, image_url: e.target.value }))
-                      }
-                      placeholder="https://..."
-                    />
-                  </div>
+                  <ImageUploader
+                    value={form.image_url}
+                    onChange={(url) =>
+                      setForm((prev) => ({ ...prev, image_url: url }))
+                    }
+                    label="Featured Image"
+                  />
 
                   <div>
                     <Label htmlFor="reading_time">Reading Time (minutes)</Label>
@@ -495,6 +498,56 @@ export default function ArticleEditor() {
                       }
                     />
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Scheduling Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Publishing
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Status</Label>
+                    <Select
+                      value={form.status}
+                      onValueChange={(value) =>
+                        setForm((prev) => ({ 
+                          ...prev, 
+                          status: value as "draft" | "scheduled" | "published" 
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="scheduled">Scheduled</SelectItem>
+                        <SelectItem value="published">Published</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {form.status === "scheduled" && (
+                    <div>
+                      <Label htmlFor="scheduled_for">Publish Date & Time</Label>
+                      <Input
+                        id="scheduled_for"
+                        type="datetime-local"
+                        value={form.scheduled_for ? form.scheduled_for.slice(0, 16) : ""}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            scheduled_for: e.target.value ? new Date(e.target.value).toISOString() : "",
+                          }))
+                        }
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 

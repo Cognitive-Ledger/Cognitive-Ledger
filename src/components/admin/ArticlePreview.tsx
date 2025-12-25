@@ -107,9 +107,11 @@ export function ArticlePreview({
         <div className="prose prose-invert max-w-none">
           {contentParts.map((part, index) => (
             part.type === "text" ? (
-              <div key={index} className="whitespace-pre-wrap">
-                {part.content}
-              </div>
+              <div 
+                key={index} 
+                className="whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{ __html: part.content }}
+              />
             ) : (
               <SingleEmbed key={index} embed={part.embed} />
             )

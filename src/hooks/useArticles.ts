@@ -21,6 +21,8 @@ export interface Article {
   ethical_risk: string | null;
   published_at: string;
   embeds: Json | null;
+  status?: string;
+  scheduled_for?: string | null;
 }
 
 export function useArticles() {
