@@ -112,6 +112,24 @@ export default function ArticleEditor() {
     }));
   };
 
+  const handleAIInsertStructured = (article: {
+    title: string;
+    excerpt: string;
+    content: string;
+    simple_content: string;
+    technical_content: string;
+  }) => {
+    setForm((prev) => ({
+      ...prev,
+      title: article.title || prev.title,
+      slug: article.title ? generateSlug(article.title) : prev.slug,
+      excerpt: article.excerpt || prev.excerpt,
+      content: article.content || prev.content,
+      simple_content: article.simple_content || prev.simple_content,
+      technical_content: article.technical_content || prev.technical_content,
+    }));
+  };
+
   useEffect(() => {
     if (isEditing) {
       fetchArticle();
@@ -413,6 +431,7 @@ export default function ArticleEditor() {
                 <AIWritingAssistant
                   currentContent={form.content}
                   onInsertContent={handleAIInsert}
+                  onInsertStructuredArticle={handleAIInsertStructured}
                 />
 
                 <Card>

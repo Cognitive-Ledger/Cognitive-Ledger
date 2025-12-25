@@ -23,15 +23,25 @@ type AssistAction =
   | "write-article"
   | "deep-research";
 
+interface StructuredArticle {
+  title: string;
+  excerpt: string;
+  content: string;
+  simple_content: string;
+  technical_content: string;
+}
+
 interface AIWritingAssistantProps {
   currentContent: string;
   onInsertContent: (content: string) => void;
+  onInsertStructuredArticle?: (article: StructuredArticle) => void;
 }
 
-export function AIWritingAssistant({ currentContent, onInsertContent }: AIWritingAssistantProps) {
+export function AIWritingAssistant({ currentContent, onInsertContent, onInsertStructuredArticle }: AIWritingAssistantProps) {
   const [action, setAction] = useState<AssistAction>("write-article");
   const [prompt, setPrompt] = useState("");
   const [result, setResult] = useState("");
+  const [structuredResult, setStructuredResult] = useState<StructuredArticle | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
@@ -105,6 +115,7 @@ export function AIWritingAssistant({ currentContent, onInsertContent }: AIWritin
 
     setIsLoading(true);
     setResult("");
+    setStructuredResult(null);
 
     try {
       const response = await supabase.functions.invoke("article-ai-assist", {
@@ -116,6 +127,11 @@ export function AIWritingAssistant({ currentContent, onInsertContent }: AIWritin
       }
 
       setResult(response.data.result);
+      
+      // Check for structured article data
+      if (response.data.structured) {
+        setStructuredResult(response.data.structured);
+      }
       
       toast({
         title: action === "deep-research" ? "Research complete" : "Content generated",
@@ -151,6 +167,16 @@ export function AIWritingAssistant({ currentContent, onInsertContent }: AIWritin
       title: "Inserted",
       description: "Content added to the editor",
     });
+  };
+
+  const handleInsertStructured = () => {
+    if (structuredResult && onInsertStructuredArticle) {
+      onInsertStructuredArticle(structuredResult);
+      toast({
+        title: "Article inserted",
+        description: "Title, excerpt, and all content versions have been added to the form",
+      });
+    }
   };
 
   const getPlaceholder = () => {
@@ -260,11 +286,35 @@ export function AIWritingAssistant({ currentContent, onInsertContent }: AIWritin
 
         {result && (
           <div className="space-y-2">
-            <div className="bg-muted rounded-lg p-4 max-h-96 overflow-y-auto">
-              <pre className="whitespace-pre-wrap text-sm font-sans">
-                {result}
-              </pre>
-            </div>
+            {structuredResult ? (
+              <div className="bg-muted rounded-lg p-4 max-h-96 overflow-y-auto space-y-3">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Title</p>
+                  <p className="text-sm font-semibold">{structuredResult.title}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Excerpt</p>
+                  <p className="text-sm">{structuredResult.excerpt}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Main Content Preview</p>
+                  <div 
+                    className="text-sm prose prose-sm max-h-32 overflow-y-auto"
+                    dangerouslySetInnerHTML={{ __html: structuredResult.content.substring(0, 500) + "..." }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  + Simple version ({structuredResult.simple_content.length} chars) 
+                  + Technical version ({structuredResult.technical_content.length} chars)
+                </p>
+              </div>
+            ) : (
+              <div className="bg-muted rounded-lg p-4 max-h-96 overflow-y-auto">
+                <pre className="whitespace-pre-wrap text-sm font-sans">
+                  {result}
+                </pre>
+              </div>
+            )}
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handleCopy}>
                 {copied ? (
@@ -274,9 +324,15 @@ export function AIWritingAssistant({ currentContent, onInsertContent }: AIWritin
                 )}
                 {copied ? "Copied" : "Copy"}
               </Button>
-              <Button size="sm" onClick={handleInsert}>
-                Insert into Editor
-              </Button>
+              {structuredResult && onInsertStructuredArticle ? (
+                <Button size="sm" onClick={handleInsertStructured}>
+                  Insert All Fields
+                </Button>
+              ) : (
+                <Button size="sm" onClick={handleInsert}>
+                  Insert into Editor
+                </Button>
+              )}
             </div>
           </div>
         )}

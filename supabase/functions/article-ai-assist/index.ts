@@ -60,30 +60,40 @@ Write only the excerpt, nothing else.`,
 - Correcting any errors
 Return the improved version of the text.`,
 
-    "write-article": `You are an expert AI/tech journalist at a leading publication. Write a complete, publication-ready article based on the given topic or prompt. Your article should include:
+    "write-article": `You are an expert AI/tech journalist. Write a complete article and return it as a JSON object with the following structure:
 
-1. **Compelling Headline**: A clear, engaging title that captures the essence
-2. **Lead Paragraph**: Hook the reader with the most important/interesting angle
-3. **Body Content**: 
-   - Provide thorough coverage of the topic
-   - Include relevant context and background
-   - Present multiple perspectives where appropriate
-   - Use concrete examples and data points
-4. **Structure**: Use clear sections with subheadings
-5. **Conclusion**: Summarize key takeaways or future outlook
+{
+  "title": "The headline of the article",
+  "excerpt": "A compelling 1-2 sentence summary (max 200 chars)",
+  "content": "The main article content in HTML format with proper paragraphs, headings, etc.",
+  "simple_content": "A simplified version for non-technical readers in HTML format",
+  "technical_content": "A technical deep-dive version for experts in HTML format"
+}
 
-Write in a professional, engaging journalism style. The article should be 800-1500 words and ready for publication.`,
+Guidelines:
+- Main content: 800-1500 words, professional journalism style
+- Simple content: Same story but accessible to general audience, no jargon
+- Technical content: Deep technical analysis for developers/researchers
+- Use HTML tags like <p>, <h2>, <h3>, <ul>, <li>, <strong>, <em> for formatting
+- Return ONLY valid JSON, no markdown code blocks or extra text`,
 
-    "deep-research": `You are an expert AI/tech journalist with access to web research. Based on the research content provided, write a comprehensive, well-researched article. Your article should:
+    "deep-research": `You are an expert AI/tech journalist. Based on the research provided, write a comprehensive article and return it as a JSON object:
 
-1. **Synthesize the Research**: Combine information from multiple sources
-2. **Provide Context**: Explain why this matters in the broader tech landscape
-3. **Include Data & Facts**: Use specific numbers, dates, and verifiable information
-4. **Multiple Perspectives**: Present different viewpoints on the topic
-5. **Expert Analysis**: Add your informed analysis based on the research
-6. **Proper Attribution**: Reference sources appropriately
+{
+  "title": "The headline of the article",
+  "excerpt": "A compelling 1-2 sentence summary (max 200 chars)",
+  "content": "The main article content in HTML format",
+  "simple_content": "A simplified version for non-technical readers in HTML format",
+  "technical_content": "A technical deep-dive version for experts in HTML format"
+}
 
-Write a publication-ready article of 1000-2000 words with a compelling headline and clear structure.`,
+Guidelines:
+- Synthesize research from multiple sources with proper attribution
+- Main content: 1000-2000 words
+- Simple content: Accessible to general audience
+- Technical content: Deep analysis for experts
+- Use HTML tags for formatting
+- Return ONLY valid JSON, no markdown code blocks or extra text`,
   };
   
   return prompts[action];
@@ -308,9 +318,45 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const result = data.choices?.[0]?.message?.content || "";
+    let result = data.choices?.[0]?.message?.content || "";
 
     console.log("AI response received, length:", result.length);
+
+    // For write-article and deep-research, try to parse as structured JSON
+    if (action === "write-article" || action === "deep-research") {
+      try {
+        // Clean up potential markdown code block wrapping
+        let jsonStr = result.trim();
+        if (jsonStr.startsWith("```json")) {
+          jsonStr = jsonStr.slice(7);
+        } else if (jsonStr.startsWith("```")) {
+          jsonStr = jsonStr.slice(3);
+        }
+        if (jsonStr.endsWith("```")) {
+          jsonStr = jsonStr.slice(0, -3);
+        }
+        jsonStr = jsonStr.trim();
+        
+        const structured = JSON.parse(jsonStr);
+        console.log("Parsed structured article data");
+        
+        return new Response(
+          JSON.stringify({ 
+            result,
+            structured: {
+              title: structured.title || "",
+              excerpt: structured.excerpt || "",
+              content: structured.content || "",
+              simple_content: structured.simple_content || "",
+              technical_content: structured.technical_content || "",
+            }
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (parseError) {
+        console.log("Could not parse as JSON, returning raw result:", parseError);
+      }
+    }
 
     return new Response(
       JSON.stringify({ result }),
