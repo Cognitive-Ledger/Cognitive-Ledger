@@ -18,6 +18,8 @@ import ModelsList from "./pages/admin/ModelsList";
 import ModelEditor from "./pages/admin/ModelEditor";
 import BreakingNewsList from "./pages/admin/BreakingNewsList";
 import DailyBriefList from "./pages/admin/DailyBriefList";
+import VideoArticlesList from "./pages/admin/VideoArticlesList";
+import VideoArticleEditor from "./pages/admin/VideoArticleEditor";
 
 const queryClient = new QueryClient();
 
@@ -41,11 +43,15 @@ const App = () => (
               <Route path="/models" element={<CategoryPage />} />
               <Route path="/opinion" element={<CategoryPage />} />
               <Route path="/explainers" element={<CategoryPage />} />
+              <Route path="/video" element={<CategoryPage />} />
               {/* Admin routes */}
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/articles" element={<ArticlesList />} />
               <Route path="/admin/articles/new" element={<ArticleEditor />} />
               <Route path="/admin/articles/:id" element={<ArticleEditor />} />
+              <Route path="/admin/videos" element={<VideoArticlesList />} />
+              <Route path="/admin/videos/new" element={<VideoArticleEditor />} />
+              <Route path="/admin/videos/:id" element={<VideoArticleEditor />} />
               <Route path="/admin/models" element={<ModelsList />} />
               <Route path="/admin/models/new" element={<ModelEditor />} />
               <Route path="/admin/models/:id" element={<ModelEditor />} />

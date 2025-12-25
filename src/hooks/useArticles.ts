@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -13,6 +13,7 @@ export interface Article {
   category: string;
   author: string;
   image_url: string | null;
+  video_url: string | null;
   reading_time: number;
   is_breaking: boolean;
   is_featured: boolean;
@@ -40,20 +41,91 @@ export function useArticles() {
   });
 }
 
-export function useArticle(slug: string) {
+export function useArticle(slugOrId: string, options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: ["article", slug],
+    queryKey: ["article", slugOrId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Try to find by slug first
+      let { data, error } = await supabase
         .from("articles")
         .select("*")
-        .eq("slug", slug)
+        .eq("slug", slugOrId)
         .maybeSingle();
+
+      // If not found by slug, try by ID
+      if (!data && !error) {
+        const result = await supabase
+          .from("articles")
+          .select("*")
+          .eq("id", slugOrId)
+          .maybeSingle();
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) throw error;
       return data as Article | null;
     },
-    enabled: !!slug,
+    enabled: options?.enabled !== false && !!slugOrId,
+  });
+}
+
+export function useCreateArticle() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (article: Record<string, unknown>) => {
+      const { data, error } = await supabase
+        .from("articles")
+        .insert(article as never)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+    },
+  });
+}
+
+export function useUpdateArticle() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...article }: { id: string } & Record<string, unknown>) => {
+      const { data, error } = await supabase
+        .from("articles")
+        .update(article as never)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+    },
+  });
+}
+
+export function useDeleteArticle() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("articles")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
+    },
   });
 }
 

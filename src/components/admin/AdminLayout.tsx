@@ -10,6 +10,7 @@ import {
   Calendar,
   LogOut,
   ChevronLeft,
+  Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,6 +22,7 @@ interface AdminLayoutProps {
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { name: "Articles", href: "/admin/articles", icon: FileText },
+  { name: "Videos", href: "/admin/videos", icon: Video },
   { name: "AI Models", href: "/admin/models", icon: Cpu },
   { name: "Breaking News", href: "/admin/breaking", icon: Zap },
   { name: "Daily Brief", href: "/admin/daily-brief", icon: Calendar },
