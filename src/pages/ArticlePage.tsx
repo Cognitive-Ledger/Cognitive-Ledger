@@ -4,12 +4,61 @@ import { Layout } from "@/components/layout/Layout";
 import { AIImpactPanel } from "@/components/articles/AIImpactPanel";
 import { ReadingModeToggle } from "@/components/articles/ReadingModeToggle";
 import { ArticleCard } from "@/components/articles/ArticleCard";
-import { EmbedRenderer, type Embed } from "@/components/articles/EmbedRenderer";
+import { EmbedRenderer, SingleEmbed, parseContentWithEmbeds, getUnplacedEmbeds, type Embed } from "@/components/articles/EmbedRenderer";
 import { useArticle, useArticles } from "@/hooks/useArticles";
 import { Clock, ArrowLeft, Share2, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet-async";
 import { Skeleton } from "@/components/ui/skeleton";
+
+// Component to render article content with inline embeds
+function ArticleContent({ content, embeds }: { content: string; embeds: Embed[] }) {
+  const parts = parseContentWithEmbeds(content, embeds);
+  
+  return (
+    <>
+      {parts.map((part, partIndex) => {
+        if (part.type === "embed") {
+          return <SingleEmbed key={`embed-${partIndex}`} embed={part.embed} />;
+        }
+        
+        // Render text content with paragraph parsing
+        return part.content.split("\n\n").map((paragraph, index) => {
+          const key = `${partIndex}-${index}`;
+          if (paragraph.startsWith("**") && paragraph.includes(":**")) {
+            const [title, ...contentParts] = paragraph.split(":");
+            return (
+              <div key={key} className="mb-6">
+                <h3 className="font-serif text-lg font-semibold mb-2">
+                  {title.replace(/\*\*/g, "")}
+                </h3>
+                <p className="body-text">{contentParts.join(":").trim()}</p>
+              </div>
+            );
+          }
+          if (paragraph.startsWith("- ")) {
+            const items = paragraph.split("\n").filter((l) => l.startsWith("- "));
+            return (
+              <ul key={key} className="list-disc list-inside mb-6 space-y-1">
+                {items.map((item, i) => (
+                  <li key={i} className="body-text">
+                    {item.replace("- ", "")}
+                  </li>
+                ))}
+              </ul>
+            );
+          }
+          if (!paragraph.trim()) return null;
+          return (
+            <p key={key} className="body-text mb-6">
+              {paragraph}
+            </p>
+          );
+        });
+      })}
+    </>
+  );
+}
 
 export default function ArticlePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -166,44 +215,18 @@ export default function ArticlePage() {
                 </div>
               )}
 
-              {/* Article Content */}
+              {/* Article Content with Inline Embeds */}
               <div className="prose prose-lg max-w-none">
-                {content.split("\n\n").map((paragraph, index) => {
-                  if (paragraph.startsWith("**") && paragraph.includes(":**")) {
-                    const [title, ...contentParts] = paragraph.split(":");
-                    return (
-                      <div key={index} className="mb-6">
-                        <h3 className="font-serif text-lg font-semibold mb-2">
-                          {title.replace(/\*\*/g, "")}
-                        </h3>
-                        <p className="body-text">{contentParts.join(":").trim()}</p>
-                      </div>
-                    );
-                  }
-                  if (paragraph.startsWith("- ")) {
-                    const items = paragraph.split("\n").filter((l) => l.startsWith("- "));
-                    return (
-                      <ul key={index} className="list-disc list-inside mb-6 space-y-1">
-                        {items.map((item, i) => (
-                          <li key={i} className="body-text">
-                            {item.replace("- ", "")}
-                          </li>
-                        ))}
-                      </ul>
-                    );
-                  }
-                  return (
-                    <p key={index} className="body-text mb-6">
-                      {paragraph}
-                    </p>
-                  );
-                })}
+                <ArticleContent 
+                  content={content} 
+                  embeds={(article.embeds as unknown as Embed[]) || []} 
+                />
               </div>
 
-              {/* Embedded Content */}
+              {/* Unplaced Embeds (embeds not referenced in content) */}
               {article.embeds && (article.embeds as unknown as Embed[]).length > 0 && (
                 <div className="mt-8">
-                  <EmbedRenderer embeds={article.embeds as unknown as Embed[]} />
+                  <EmbedRenderer embeds={getUnplacedEmbeds(content, article.embeds as unknown as Embed[])} />
                 </div>
               )}
 

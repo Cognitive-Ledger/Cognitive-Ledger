@@ -12,12 +12,15 @@ interface EmbedRendererProps {
   embeds: Embed[];
 }
 
+interface SingleEmbedProps {
+  embed: Embed;
+}
+
 function getEmbedUrl(embed: Embed): string {
   const { type, url } = embed;
   
   switch (type) {
     case "google-sheets":
-      // Convert Google Sheets URL to embed format
       if (url.includes("/edit")) {
         return url.replace("/edit", "/pubhtml?widget=true&headers=false");
       }
@@ -27,7 +30,6 @@ function getEmbedUrl(embed: Embed): string {
       return `${url}?widget=true&headers=false`;
     
     case "youtube":
-      // Convert YouTube URL to embed format
       if (url.includes("youtube.com/watch?v=")) {
         const videoId = url.split("v=")[1]?.split("&")[0];
         return `https://www.youtube.com/embed/${videoId}`;
@@ -39,7 +41,6 @@ function getEmbedUrl(embed: Embed): string {
       return url;
     
     case "twitter":
-      // For Twitter/X embeds, we'd typically use their widget JS
       return url;
     
     default:
@@ -47,7 +48,7 @@ function getEmbedUrl(embed: Embed): string {
   }
 }
 
-function SingleEmbed({ embed }: { embed: Embed }) {
+export function SingleEmbed({ embed }: SingleEmbedProps) {
   const embedUrl = getEmbedUrl(embed);
   const height = embed.height || 400;
 
@@ -101,4 +102,52 @@ export function EmbedRenderer({ embeds }: EmbedRendererProps) {
       ))}
     </div>
   );
+}
+
+// Helper to parse content and render with inline embeds
+export function parseContentWithEmbeds(content: string, embeds: Embed[]): Array<{ type: "text"; content: string } | { type: "embed"; embed: Embed }> {
+  const embedMap = new Map(embeds.map(e => [e.id, e]));
+  const parts: Array<{ type: "text"; content: string } | { type: "embed"; embed: Embed }> = [];
+  
+  // Match {{embed:embed-id}}
+  const regex = /\{\{embed:([^}]+)\}\}/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(content)) !== null) {
+    // Add text before the embed marker
+    if (match.index > lastIndex) {
+      parts.push({ type: "text", content: content.slice(lastIndex, match.index) });
+    }
+    
+    // Add the embed if it exists
+    const embedId = match[1];
+    const embed = embedMap.get(embedId);
+    if (embed) {
+      parts.push({ type: "embed", embed });
+      embedMap.delete(embedId); // Mark as used
+    }
+    
+    lastIndex = regex.lastIndex;
+  }
+  
+  // Add remaining text
+  if (lastIndex < content.length) {
+    parts.push({ type: "text", content: content.slice(lastIndex) });
+  }
+  
+  return parts;
+}
+
+// Get embeds that weren't placed in content (to show at the end)
+export function getUnplacedEmbeds(content: string, embeds: Embed[]): Embed[] {
+  const placedIds = new Set<string>();
+  const regex = /\{\{embed:([^}]+)\}\}/g;
+  let match;
+  
+  while ((match = regex.exec(content)) !== null) {
+    placedIds.add(match[1]);
+  }
+  
+  return embeds.filter(e => !placedIds.has(e.id));
 }
