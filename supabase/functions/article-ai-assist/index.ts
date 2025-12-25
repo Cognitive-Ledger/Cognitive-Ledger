@@ -127,84 +127,118 @@ async function scrapeWithJina(url: string): Promise<string> {
   }
 }
 
-// Search using DuckDuckGo HTML and other sources
+// Search using DuckDuckGo HTML for real web search results
 async function searchWeb(query: string): Promise<string[]> {
   console.log("Searching for:", query);
   
   const urls: string[] = [];
   
-  // DuckDuckGo Instant Answer API
+  // DuckDuckGo HTML Search - scrape actual search results
   try {
-    const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
-    const ddgResponse = await fetch(ddgUrl);
+    const searchQuery = encodeURIComponent(query);
+    const ddgHtmlUrl = `https://html.duckduckgo.com/html/?q=${searchQuery}`;
+    
+    const ddgResponse = await fetch(ddgHtmlUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+      },
+    });
+    
     if (ddgResponse.ok) {
-      const ddgData = await ddgResponse.json();
-      // Get related topics URLs
-      if (ddgData.RelatedTopics) {
-        for (const topic of ddgData.RelatedTopics.slice(0, 3)) {
-          if (topic.FirstURL) {
-            urls.push(topic.FirstURL);
+      const html = await ddgResponse.text();
+      
+      // Extract URLs from DuckDuckGo HTML results
+      // DuckDuckGo uses uddg parameter for actual URLs
+      const uddgMatches = html.matchAll(/uddg=([^&"']+)/g);
+      for (const match of uddgMatches) {
+        try {
+          const decodedUrl = decodeURIComponent(match[1]);
+          if (decodedUrl.startsWith("http") && !decodedUrl.includes("duckduckgo.com")) {
+            urls.push(decodedUrl);
           }
-          // Handle nested topics
-          if (topic.Topics) {
-            for (const subTopic of topic.Topics.slice(0, 2)) {
-              if (subTopic.FirstURL) {
-                urls.push(subTopic.FirstURL);
+        } catch (e) {
+          // Skip malformed URLs
+        }
+      }
+      
+      // Also extract from result links directly
+      const hrefMatches = html.matchAll(/href="(https?:\/\/[^"]+)"/g);
+      for (const match of hrefMatches) {
+        const url = match[1];
+        if (!url.includes("duckduckgo.com") && 
+            !url.includes("duck.co") &&
+            !url.includes("spread.duckduckgo") &&
+            !urls.includes(url)) {
+          urls.push(url);
+        }
+      }
+      
+      console.log("DuckDuckGo HTML search found URLs:", urls.length);
+    }
+  } catch (error) {
+    console.log("DuckDuckGo HTML search error:", error);
+  }
+  
+  // If DuckDuckGo HTML didn't work well, try the Instant Answer API as fallback
+  if (urls.length < 3) {
+    try {
+      const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
+      const ddgResponse = await fetch(ddgUrl);
+      if (ddgResponse.ok) {
+        const ddgData = await ddgResponse.json();
+        
+        // Get related topics URLs
+        if (ddgData.RelatedTopics) {
+          for (const topic of ddgData.RelatedTopics) {
+            if (topic.FirstURL && !urls.includes(topic.FirstURL)) {
+              urls.push(topic.FirstURL);
+            }
+            if (topic.Topics) {
+              for (const subTopic of topic.Topics) {
+                if (subTopic.FirstURL && !urls.includes(subTopic.FirstURL)) {
+                  urls.push(subTopic.FirstURL);
+                }
               }
             }
           }
         }
-      }
-      // Get abstract URL if available
-      if (ddgData.AbstractURL) {
-        urls.push(ddgData.AbstractURL);
-      }
-      // Get official site if available
-      if (ddgData.Results) {
-        for (const result of ddgData.Results.slice(0, 2)) {
-          if (result.FirstURL) {
-            urls.push(result.FirstURL);
+        
+        // Get abstract URL if available
+        if (ddgData.AbstractURL && !urls.includes(ddgData.AbstractURL)) {
+          urls.push(ddgData.AbstractURL);
+        }
+        
+        // Get official site and other results
+        if (ddgData.Results) {
+          for (const result of ddgData.Results) {
+            if (result.FirstURL && !urls.includes(result.FirstURL)) {
+              urls.push(result.FirstURL);
+            }
           }
         }
+        
+        console.log("DuckDuckGo API added URLs:", urls.length);
       }
+    } catch (error) {
+      console.log("DuckDuckGo API error:", error);
     }
-  } catch (error) {
-    console.log("DuckDuckGo search error:", error);
   }
+
+  // Deduplicate and filter URLs
+  const uniqueUrls = [...new Set(urls)].filter(url => {
+    // Filter out low-quality or problematic URLs
+    const lowerUrl = url.toLowerCase();
+    return !lowerUrl.includes("facebook.com/login") &&
+           !lowerUrl.includes("twitter.com/login") &&
+           !lowerUrl.includes("/signup") &&
+           !lowerUrl.includes("/login") &&
+           url.length < 500;
+  });
   
-  // Use Hacker News search for tech topics (reliable API)
-  try {
-    const hnUrl = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=5`;
-    const hnResponse = await fetch(hnUrl);
-    if (hnResponse.ok) {
-      const hnData = await hnResponse.json();
-      for (const hit of hnData.hits || []) {
-        if (hit.url) {
-          urls.push(hit.url);
-        }
-      }
-    }
-  } catch (error) {
-    console.log("HN search error:", error);
-  }
-
-  // Add Wikipedia article if relevant
-  try {
-    const wikiUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=2&format=json`;
-    const wikiResponse = await fetch(wikiUrl);
-    if (wikiResponse.ok) {
-      const wikiData = await wikiResponse.json();
-      const wikiUrls = wikiData[3] || [];
-      urls.push(...wikiUrls);
-    }
-  } catch (error) {
-    console.log("Wikipedia search error:", error);
-  }
-
-  // Deduplicate URLs
-  const uniqueUrls = [...new Set(urls)];
-  console.log("Found URLs:", uniqueUrls.length);
-  return uniqueUrls.slice(0, 8); // Limit to 8 URLs
+  console.log("Found unique URLs:", uniqueUrls.length);
+  return uniqueUrls.slice(0, 10); // Get up to 10 diverse sources
 }
 
 async function deepResearch(query: string): Promise<string> {
@@ -212,83 +246,56 @@ async function deepResearch(query: string): Promise<string> {
   
   let researchContent = `# Research Results for: "${query}"\n\n`;
   
-  // Step 1: Find relevant URLs
+  // Step 1: Search the web for relevant URLs
   const urls = await searchWeb(query);
+  
+  // Also search with related keywords for broader coverage
+  const relatedQueries = [
+    `${query} latest news`,
+    `${query} analysis`,
+  ];
+  
+  for (const relatedQuery of relatedQueries) {
+    const additionalUrls = await searchWeb(relatedQuery);
+    for (const url of additionalUrls) {
+      if (!urls.includes(url)) {
+        urls.push(url);
+      }
+    }
+    // Don't get too many URLs
+    if (urls.length >= 15) break;
+  }
+  
+  console.log("Total URLs to research:", urls.length);
   
   if (urls.length === 0) {
     researchContent += "Note: No specific web sources found. Article will be generated based on general knowledge.\n";
     return researchContent;
   }
 
-  // Step 2: Scrape each URL using Jina Reader
-  for (const url of urls) {
-    console.log("Processing URL:", url);
+  // Step 2: Scrape each URL using Jina Reader for real content
+  let successfulScrapes = 0;
+  for (const url of urls.slice(0, 12)) { // Limit to 12 URLs to avoid timeout
+    console.log("Scraping URL:", url);
     
     try {
       const content = await scrapeWithJina(url);
       
-      if (content && content.length > 100) {
+      if (content && content.length > 200) {
         researchContent += `\n---\n## Source: ${url}\n\n`;
-        // Truncate each source to avoid token limits
-        researchContent += content.substring(0, 8000) + "\n";
+        // Truncate each source to manage token limits
+        researchContent += content.substring(0, 6000) + "\n";
+        successfulScrapes++;
+        
+        // Stop if we have enough content
+        if (successfulScrapes >= 8) break;
       }
     } catch (error) {
-      console.log("Error processing URL:", url, error);
+      console.log("Error scraping URL:", url, error);
     }
   }
 
-  // Step 3: Add recent news from Hacker News discussions
-  try {
-    const hnUrl = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=5`;
-    const hnResponse = await fetch(hnUrl);
-    if (hnResponse.ok) {
-      const hnData = await hnResponse.json();
-      if (hnData.hits && hnData.hits.length > 0) {
-        researchContent += "\n---\n## Recent Tech News & Discussions (Hacker News)\n\n";
-        for (const hit of hnData.hits) {
-          researchContent += `### ${hit.title}\n`;
-          if (hit.url) researchContent += `Source: ${hit.url}\n`;
-          researchContent += `Points: ${hit.points} | Comments: ${hit.num_comments}\n`;
-          researchContent += `Posted: ${hit.created_at}\n\n`;
-        }
-      }
-    }
-  } catch (error) {
-    console.log("HN news fetch error:", error);
-  }
-
-  // Step 4: Add arXiv papers for academic content
-  if (query.toLowerCase().includes('ai') || query.toLowerCase().includes('machine learning') || 
-      query.toLowerCase().includes('neural') || query.toLowerCase().includes('model') ||
-      query.toLowerCase().includes('llm') || query.toLowerCase().includes('gpt')) {
-    try {
-      const arxivUrl = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&start=0&max_results=3&sortBy=submittedDate&sortOrder=descending`;
-      const arxivResponse = await fetch(arxivUrl);
-      if (arxivResponse.ok) {
-        const arxivText = await arxivResponse.text();
-        const entries = arxivText.match(/<entry>[\s\S]*?<\/entry>/g) || [];
-        if (entries.length > 0) {
-          researchContent += "\n---\n## Academic Research Papers (arXiv)\n\n";
-          for (const entry of entries) {
-            const title = entry.match(/<title>([\s\S]*?)<\/title>/)?.[1]?.trim() || "";
-            const summary = entry.match(/<summary>([\s\S]*?)<\/summary>/)?.[1]?.trim() || "";
-            const published = entry.match(/<published>([\s\S]*?)<\/published>/)?.[1]?.trim() || "";
-            const link = entry.match(/<id>([\s\S]*?)<\/id>/)?.[1]?.trim() || "";
-            if (title) {
-              researchContent += `### ${title.replace(/\n/g, ' ')}\n`;
-              researchContent += `Published: ${published}\n`;
-              researchContent += `Link: ${link}\n`;
-              researchContent += `Abstract: ${summary.substring(0, 800).replace(/\n/g, ' ')}...\n\n`;
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.log("arXiv search error:", error);
-    }
-  }
-
-  console.log("Research complete, content length:", researchContent.length);
+  console.log("Research complete. Successful scrapes:", successfulScrapes, "Content length:", researchContent.length);
   return researchContent;
 }
 
