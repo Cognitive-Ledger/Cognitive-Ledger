@@ -127,11 +127,50 @@ async function scrapeWithJina(url: string): Promise<string> {
   }
 }
 
-// Search using DuckDuckGo HTML (no API key needed)
+// Search using DuckDuckGo HTML and other sources
 async function searchWeb(query: string): Promise<string[]> {
   console.log("Searching for:", query);
   
   const urls: string[] = [];
+  
+  // DuckDuckGo Instant Answer API
+  try {
+    const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
+    const ddgResponse = await fetch(ddgUrl);
+    if (ddgResponse.ok) {
+      const ddgData = await ddgResponse.json();
+      // Get related topics URLs
+      if (ddgData.RelatedTopics) {
+        for (const topic of ddgData.RelatedTopics.slice(0, 3)) {
+          if (topic.FirstURL) {
+            urls.push(topic.FirstURL);
+          }
+          // Handle nested topics
+          if (topic.Topics) {
+            for (const subTopic of topic.Topics.slice(0, 2)) {
+              if (subTopic.FirstURL) {
+                urls.push(subTopic.FirstURL);
+              }
+            }
+          }
+        }
+      }
+      // Get abstract URL if available
+      if (ddgData.AbstractURL) {
+        urls.push(ddgData.AbstractURL);
+      }
+      // Get official site if available
+      if (ddgData.Results) {
+        for (const result of ddgData.Results.slice(0, 2)) {
+          if (result.FirstURL) {
+            urls.push(result.FirstURL);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.log("DuckDuckGo search error:", error);
+  }
   
   // Use Hacker News search for tech topics (reliable API)
   try {
@@ -162,8 +201,10 @@ async function searchWeb(query: string): Promise<string[]> {
     console.log("Wikipedia search error:", error);
   }
 
-  console.log("Found URLs:", urls.length);
-  return urls.slice(0, 5); // Limit to 5 URLs
+  // Deduplicate URLs
+  const uniqueUrls = [...new Set(urls)];
+  console.log("Found URLs:", uniqueUrls.length);
+  return uniqueUrls.slice(0, 8); // Limit to 8 URLs
 }
 
 async function deepResearch(query: string): Promise<string> {
