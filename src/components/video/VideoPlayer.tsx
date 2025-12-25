@@ -2,15 +2,10 @@ import {
   MediaPlayer,
   MediaOutlet,
   MediaPoster,
-  MediaPlayButton,
-  MediaMuteButton,
-  MediaFullscreenButton,
-  MediaTime,
-  MediaTimeSlider,
-  MediaVolumeSlider,
-  MediaBufferingIndicator,
   MediaCommunitySkin,
 } from '@vidstack/react';
+import 'vidstack/styles/defaults.css';
+import 'vidstack/styles/community-skin/video.css';
 
 interface VideoPlayerProps {
   src: string;
@@ -24,11 +19,12 @@ export function VideoPlayer({ src, title, poster, className }: VideoPlayerProps)
     <MediaPlayer
       title={title}
       src={src}
-      className={className}
+      className={`video-player ${className || ''}`}
       crossorigin=""
+      playsInline
     >
       <MediaOutlet>
-        {poster && <MediaPoster alt={title || 'Video poster'} />}
+        {poster && <MediaPoster alt={title || 'Video poster'} src={poster} />}
       </MediaOutlet>
       <MediaCommunitySkin />
     </MediaPlayer>
