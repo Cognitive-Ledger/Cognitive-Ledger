@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 export interface Article {
   id: string;
@@ -19,6 +20,7 @@ export interface Article {
   technical_impact: string | null;
   ethical_risk: string | null;
   published_at: string;
+  embeds: Json | null;
 }
 
 export function useArticles() {

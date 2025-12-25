@@ -69,6 +69,7 @@ export type Database = {
           category: Database["public"]["Enums"]["article_category"]
           content: string
           created_at: string
+          embeds: Json | null
           ethical_risk: Database["public"]["Enums"]["impact_level"] | null
           excerpt: string
           id: string
@@ -90,6 +91,7 @@ export type Database = {
           category: Database["public"]["Enums"]["article_category"]
           content: string
           created_at?: string
+          embeds?: Json | null
           ethical_risk?: Database["public"]["Enums"]["impact_level"] | null
           excerpt: string
           id?: string
@@ -111,6 +113,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["article_category"]
           content?: string
           created_at?: string
+          embeds?: Json | null
           ethical_risk?: Database["public"]["Enums"]["impact_level"] | null
           excerpt?: string
           id?: string

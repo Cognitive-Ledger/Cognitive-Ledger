@@ -4,6 +4,7 @@ import { Layout } from "@/components/layout/Layout";
 import { AIImpactPanel } from "@/components/articles/AIImpactPanel";
 import { ReadingModeToggle } from "@/components/articles/ReadingModeToggle";
 import { ArticleCard } from "@/components/articles/ArticleCard";
+import { EmbedRenderer, type Embed } from "@/components/articles/EmbedRenderer";
 import { useArticle, useArticles } from "@/hooks/useArticles";
 import { Clock, ArrowLeft, Share2, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -198,6 +199,13 @@ export default function ArticlePage() {
                   );
                 })}
               </div>
+
+              {/* Embedded Content */}
+              {article.embeds && (article.embeds as unknown as Embed[]).length > 0 && (
+                <div className="mt-8">
+                  <EmbedRenderer embeds={article.embeds as unknown as Embed[]} />
+                </div>
+              )}
 
               {/* Tags */}
               <div className="mt-12 pt-8 border-t border-divider">
