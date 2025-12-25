@@ -13,7 +13,8 @@ type AssistAction =
   | "generate-excerpt"
   | "improve-writing"
   | "write-article"
-  | "deep-research";
+  | "deep-research"
+  | "research-model";
 
 function getSystemPrompt(action: AssistAction): string {
   const prompts: Record<AssistAction, string> = {
@@ -94,6 +95,31 @@ Guidelines:
 - Technical content: Deep analysis for experts
 - Use HTML tags for formatting
 - Return ONLY valid JSON, no markdown code blocks or extra text`,
+
+    "research-model": `You are an AI expert researcher. Based on the research provided about an AI model, extract and return comprehensive information as a JSON object:
+
+{
+  "name": "Official model name (e.g., GPT-4, Claude 3, Gemini Pro)",
+  "version": "Version number or identifier",
+  "provider": "Company/organization name (e.g., OpenAI, Anthropic, Google)",
+  "category": "Model category (LLM, Image Generation, Multimodal, Speech, Embedding, Code, Vision)",
+  "description": "Detailed 2-3 sentence description of the model's capabilities and purpose",
+  "release_date": "Release date in YYYY-MM-DD format",
+  "parameters": "Parameter count (e.g., 175B, 1.76T, Unknown)",
+  "context_window": "Context window size (e.g., 128K tokens, 200K tokens)",
+  "pricing": "Pricing info (e.g., $0.03/1K input tokens, Free tier available)",
+  "benchmarks": {
+    "MMLU": 86.4,
+    "HumanEval": 67.0,
+    "GSM8K": 92.0
+  }
+}
+
+Guidelines:
+- Extract accurate, factual information from the research
+- Use real benchmark scores when available, omit if not found
+- For unknown fields, use reasonable estimates or "Unknown"
+- Return ONLY valid JSON, no markdown code blocks`,
   };
   
   return prompts[action];
@@ -128,12 +154,10 @@ async function scrapeWithJina(url: string): Promise<string> {
 }
 
 // Search using DuckDuckGo HTML for real web search results
-async function searchWeb(query: string): Promise<string[]> {
-  console.log("Searching for:", query);
-  
+async function searchDuckDuckGo(query: string): Promise<string[]> {
+  console.log("Searching DuckDuckGo for:", query);
   const urls: string[] = [];
   
-  // DuckDuckGo HTML Search - scrape actual search results
   try {
     const searchQuery = encodeURIComponent(query);
     const ddgHtmlUrl = `https://html.duckduckgo.com/html/?q=${searchQuery}`;
@@ -150,7 +174,6 @@ async function searchWeb(query: string): Promise<string[]> {
       const html = await ddgResponse.text();
       
       // Extract URLs from DuckDuckGo HTML results
-      // DuckDuckGo uses uddg parameter for actual URLs
       const uddgMatches = html.matchAll(/uddg=([^&"']+)/g);
       for (const match of uddgMatches) {
         try {
@@ -175,70 +198,235 @@ async function searchWeb(query: string): Promise<string[]> {
         }
       }
       
-      console.log("DuckDuckGo HTML search found URLs:", urls.length);
+      console.log("DuckDuckGo found URLs:", urls.length);
     }
   } catch (error) {
-    console.log("DuckDuckGo HTML search error:", error);
+    console.log("DuckDuckGo search error:", error);
   }
   
-  // If DuckDuckGo HTML didn't work well, try the Instant Answer API as fallback
-  if (urls.length < 3) {
+  return urls;
+}
+
+// Search using Brave Search API (free tier available)
+async function searchBrave(query: string): Promise<string[]> {
+  console.log("Searching Brave for:", query);
+  const urls: string[] = [];
+  
+  try {
+    // Brave Search has a free web search that can be scraped
+    const searchQuery = encodeURIComponent(query);
+    const braveUrl = `https://search.brave.com/search?q=${searchQuery}&source=web`;
+    
+    const response = await fetch(braveUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+    });
+    
+    if (response.ok) {
+      const html = await response.text();
+      
+      // Extract URLs from Brave search results
+      const hrefMatches = html.matchAll(/href="(https?:\/\/[^"]+)"/g);
+      for (const match of hrefMatches) {
+        const url = match[1];
+        if (!url.includes("brave.com") && 
+            !url.includes("bravesoftware.com") &&
+            !urls.includes(url) &&
+            !url.includes("/search?") &&
+            url.length < 300) {
+          urls.push(url);
+        }
+      }
+      
+      console.log("Brave found URLs:", urls.length);
+    }
+  } catch (error) {
+    console.log("Brave search error:", error);
+  }
+  
+  return urls;
+}
+
+// Search using Bing (scraping)
+async function searchBing(query: string): Promise<string[]> {
+  console.log("Searching Bing for:", query);
+  const urls: string[] = [];
+  
+  try {
+    const searchQuery = encodeURIComponent(query);
+    const bingUrl = `https://www.bing.com/search?q=${searchQuery}&count=20`;
+    
+    const response = await fetch(bingUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+    });
+    
+    if (response.ok) {
+      const html = await response.text();
+      
+      // Extract URLs from Bing search results
+      const hrefMatches = html.matchAll(/href="(https?:\/\/[^"]+)"/g);
+      for (const match of hrefMatches) {
+        const url = match[1];
+        if (!url.includes("bing.com") && 
+            !url.includes("microsoft.com") &&
+            !url.includes("msn.com") &&
+            !urls.includes(url) &&
+            !url.includes("/search?") &&
+            url.length < 300) {
+          urls.push(url);
+        }
+      }
+      
+      console.log("Bing found URLs:", urls.length);
+    }
+  } catch (error) {
+    console.log("Bing search error:", error);
+  }
+  
+  return urls;
+}
+
+// Search using Google (via scraping fallback)
+async function searchGoogle(query: string): Promise<string[]> {
+  console.log("Searching Google for:", query);
+  const urls: string[] = [];
+  
+  try {
+    const searchQuery = encodeURIComponent(query);
+    const googleUrl = `https://www.google.com/search?q=${searchQuery}&num=20`;
+    
+    const response = await fetch(googleUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+    });
+    
+    if (response.ok) {
+      const html = await response.text();
+      
+      // Extract URLs from Google search results
+      // Google uses /url?q= format for external links
+      const urlMatches = html.matchAll(/\/url\?q=(https?:\/\/[^&]+)/g);
+      for (const match of urlMatches) {
+        try {
+          const decodedUrl = decodeURIComponent(match[1]);
+          if (!decodedUrl.includes("google.com") && 
+              !decodedUrl.includes("googleapis.com") &&
+              !urls.includes(decodedUrl) &&
+              decodedUrl.length < 300) {
+            urls.push(decodedUrl);
+          }
+        } catch (e) {
+          // Skip malformed URLs
+        }
+      }
+      
+      // Also try direct href extraction
+      const hrefMatches = html.matchAll(/href="(https?:\/\/[^"]+)"/g);
+      for (const match of hrefMatches) {
+        const url = match[1];
+        if (!url.includes("google.com") && 
+            !url.includes("googleapis.com") &&
+            !url.includes("gstatic.com") &&
+            !urls.includes(url) &&
+            url.length < 300) {
+          urls.push(url);
+        }
+      }
+      
+      console.log("Google found URLs:", urls.length);
+    }
+  } catch (error) {
+    console.log("Google search error:", error);
+  }
+  
+  return urls;
+}
+
+// Search using SearXNG public instances (meta-search engine)
+async function searchSearXNG(query: string): Promise<string[]> {
+  console.log("Searching SearXNG for:", query);
+  const urls: string[] = [];
+  
+  // Try multiple public SearXNG instances
+  const instances = [
+    "https://searx.be",
+    "https://search.sapti.me",
+    "https://searx.tiekoetter.com",
+  ];
+  
+  for (const instance of instances) {
     try {
-      const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
-      const ddgResponse = await fetch(ddgUrl);
-      if (ddgResponse.ok) {
-        const ddgData = await ddgResponse.json();
+      const searchQuery = encodeURIComponent(query);
+      const searxUrl = `${instance}/search?q=${searchQuery}&format=json&categories=general`;
+      
+      const response = await fetch(searxUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "Accept": "application/json",
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
         
-        // Get related topics URLs
-        if (ddgData.RelatedTopics) {
-          for (const topic of ddgData.RelatedTopics) {
-            if (topic.FirstURL && !urls.includes(topic.FirstURL)) {
-              urls.push(topic.FirstURL);
-            }
-            if (topic.Topics) {
-              for (const subTopic of topic.Topics) {
-                if (subTopic.FirstURL && !urls.includes(subTopic.FirstURL)) {
-                  urls.push(subTopic.FirstURL);
-                }
-              }
-            }
-          }
-        }
-        
-        // Get abstract URL if available
-        if (ddgData.AbstractURL && !urls.includes(ddgData.AbstractURL)) {
-          urls.push(ddgData.AbstractURL);
-        }
-        
-        // Get official site and other results
-        if (ddgData.Results) {
-          for (const result of ddgData.Results) {
-            if (result.FirstURL && !urls.includes(result.FirstURL)) {
-              urls.push(result.FirstURL);
+        if (data.results && Array.isArray(data.results)) {
+          for (const result of data.results) {
+            if (result.url && !urls.includes(result.url)) {
+              urls.push(result.url);
             }
           }
         }
         
-        console.log("DuckDuckGo API added URLs:", urls.length);
+        console.log(`SearXNG (${instance}) found URLs:`, urls.length);
+        if (urls.length > 0) break; // Stop if we got results
       }
     } catch (error) {
-      console.log("DuckDuckGo API error:", error);
+      console.log(`SearXNG (${instance}) error:`, error);
     }
   }
+  
+  return urls;
+}
 
-  // Deduplicate and filter URLs
-  const uniqueUrls = [...new Set(urls)].filter(url => {
-    // Filter out low-quality or problematic URLs
+// Combined multi-engine search
+async function searchWeb(query: string): Promise<string[]> {
+  console.log("Starting multi-engine search for:", query);
+  
+  // Run all search engines in parallel for speed
+  const [duckduckgoUrls, braveUrls, bingUrls, googleUrls, searxngUrls] = await Promise.all([
+    searchDuckDuckGo(query),
+    searchBrave(query),
+    searchBing(query),
+    searchGoogle(query),
+    searchSearXNG(query),
+  ]);
+  
+  // Combine and deduplicate URLs
+  const allUrls = [...duckduckgoUrls, ...braveUrls, ...bingUrls, ...googleUrls, ...searxngUrls];
+  
+  // Filter and deduplicate
+  const uniqueUrls = [...new Set(allUrls)].filter(url => {
     const lowerUrl = url.toLowerCase();
     return !lowerUrl.includes("facebook.com/login") &&
            !lowerUrl.includes("twitter.com/login") &&
            !lowerUrl.includes("/signup") &&
            !lowerUrl.includes("/login") &&
+           !lowerUrl.includes("linkedin.com/login") &&
            url.length < 500;
   });
   
-  console.log("Found unique URLs:", uniqueUrls.length);
-  return uniqueUrls.slice(0, 10); // Get up to 10 diverse sources
+  console.log("Multi-engine search total unique URLs:", uniqueUrls.length);
+  return uniqueUrls.slice(0, 15); // Get up to 15 diverse sources
 }
 
 async function deepResearch(query: string): Promise<string> {
@@ -246,13 +434,13 @@ async function deepResearch(query: string): Promise<string> {
   
   let researchContent = `# Research Results for: "${query}"\n\n`;
   
-  // Step 1: Search the web for relevant URLs
+  // Step 1: Search the web using multiple engines
   const urls = await searchWeb(query);
   
   // Also search with related keywords for broader coverage
   const relatedQueries = [
-    `${query} latest news`,
-    `${query} analysis`,
+    `${query} latest news 2024 2025`,
+    `${query} analysis review`,
   ];
   
   for (const relatedQuery of relatedQueries) {
@@ -263,7 +451,7 @@ async function deepResearch(query: string): Promise<string> {
       }
     }
     // Don't get too many URLs
-    if (urls.length >= 15) break;
+    if (urls.length >= 20) break;
   }
   
   console.log("Total URLs to research:", urls.length);
@@ -275,7 +463,7 @@ async function deepResearch(query: string): Promise<string> {
 
   // Step 2: Scrape each URL using Jina Reader for real content
   let successfulScrapes = 0;
-  for (const url of urls.slice(0, 12)) { // Limit to 12 URLs to avoid timeout
+  for (const url of urls.slice(0, 15)) { // Limit to 15 URLs
     console.log("Scraping URL:", url);
     
     try {
@@ -284,11 +472,11 @@ async function deepResearch(query: string): Promise<string> {
       if (content && content.length > 200) {
         researchContent += `\n---\n## Source: ${url}\n\n`;
         // Truncate each source to manage token limits
-        researchContent += content.substring(0, 6000) + "\n";
+        researchContent += content.substring(0, 5000) + "\n";
         successfulScrapes++;
         
         // Stop if we have enough content
-        if (successfulScrapes >= 8) break;
+        if (successfulScrapes >= 10) break;
       }
     } catch (error) {
       console.log("Error scraping URL:", url, error);
@@ -296,6 +484,60 @@ async function deepResearch(query: string): Promise<string> {
   }
 
   console.log("Research complete. Successful scrapes:", successfulScrapes, "Content length:", researchContent.length);
+  return researchContent;
+}
+
+async function researchModel(modelQuery: string): Promise<string> {
+  console.log("Starting model research for:", modelQuery);
+  
+  let researchContent = `# AI Model Research: "${modelQuery}"\n\n`;
+  
+  // Search for model-specific information
+  const searchQueries = [
+    `${modelQuery} AI model specifications`,
+    `${modelQuery} benchmarks performance`,
+    `${modelQuery} release announcement`,
+    `${modelQuery} pricing API`,
+  ];
+  
+  const allUrls: string[] = [];
+  
+  for (const query of searchQueries) {
+    const urls = await searchWeb(query);
+    for (const url of urls) {
+      if (!allUrls.includes(url)) {
+        allUrls.push(url);
+      }
+    }
+    if (allUrls.length >= 15) break;
+  }
+  
+  console.log("Total model research URLs:", allUrls.length);
+  
+  if (allUrls.length === 0) {
+    researchContent += "Note: Limited sources found. Model information will be based on general knowledge.\n";
+    return researchContent;
+  }
+
+  // Scrape each URL
+  let successfulScrapes = 0;
+  for (const url of allUrls.slice(0, 10)) {
+    try {
+      const content = await scrapeWithJina(url);
+      
+      if (content && content.length > 200) {
+        researchContent += `\n---\n## Source: ${url}\n\n`;
+        researchContent += content.substring(0, 4000) + "\n";
+        successfulScrapes++;
+        
+        if (successfulScrapes >= 6) break;
+      }
+    } catch (error) {
+      console.log("Error scraping URL:", url, error);
+    }
+  }
+
+  console.log("Model research complete. Scrapes:", successfulScrapes);
   return researchContent;
 }
 
@@ -321,11 +563,18 @@ serve(async (req) => {
 
     let inputContent = content;
     
-    // For deep-research, gather web content using Jina Reader
+    // For deep-research, gather web content
     if (action === "deep-research") {
       console.log("Starting deep research for:", content);
       const researchData = await deepResearch(content);
       inputContent = `RESEARCH TOPIC: ${content}\n\n--- GATHERED RESEARCH DATA ---\n\n${researchData}\n\n--- END OF RESEARCH DATA ---\n\nBased on the above research, write a comprehensive, well-sourced article about: ${content}`;
+    }
+    
+    // For research-model, gather model-specific information
+    if (action === "research-model") {
+      console.log("Starting model research for:", content);
+      const researchData = await researchModel(content);
+      inputContent = `AI MODEL TO RESEARCH: ${content}\n\n--- GATHERED RESEARCH DATA ---\n\n${researchData}\n\n--- END OF RESEARCH DATA ---\n\nBased on the above research, extract comprehensive information about the AI model: ${content}`;
     }
 
     const systemPrompt = getSystemPrompt(action as AssistAction);
@@ -370,8 +619,8 @@ serve(async (req) => {
 
     console.log("AI response received, length:", result.length);
 
-    // For write-article and deep-research, try to parse as structured JSON
-    if (action === "write-article" || action === "deep-research") {
+    // For structured responses, try to parse as JSON
+    if (action === "write-article" || action === "deep-research" || action === "research-model") {
       try {
         // Clean up potential markdown code block wrapping
         let jsonStr = result.trim();
@@ -386,18 +635,12 @@ serve(async (req) => {
         jsonStr = jsonStr.trim();
         
         const structured = JSON.parse(jsonStr);
-        console.log("Parsed structured article data");
+        console.log("Parsed structured data");
         
         return new Response(
           JSON.stringify({ 
             result,
-            structured: {
-              title: structured.title || "",
-              excerpt: structured.excerpt || "",
-              content: structured.content || "",
-              simple_content: structured.simple_content || "",
-              technical_content: structured.technical_content || "",
-            }
+            structured
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );

@@ -86,6 +86,7 @@ export type Database = {
           technical_impact: Database["public"]["Enums"]["impact_level"] | null
           title: string
           updated_at: string
+          video_url: string | null
         }
         Insert: {
           author: string
@@ -110,6 +111,7 @@ export type Database = {
           technical_impact?: Database["public"]["Enums"]["impact_level"] | null
           title: string
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
           author?: string
@@ -134,6 +136,7 @@ export type Database = {
           technical_impact?: Database["public"]["Enums"]["impact_level"] | null
           title?: string
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: []
       }
@@ -254,6 +257,7 @@ export type Database = {
         | "models"
         | "opinion"
         | "explainers"
+        | "video"
       impact_level: "low" | "medium" | "high"
     }
     CompositeTypes: {
@@ -391,6 +395,7 @@ export const Constants = {
         "models",
         "opinion",
         "explainers",
+        "video",
       ],
       impact_level: ["low", "medium", "high"],
     },

@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Save } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { AIModelAssistant } from "@/components/admin/AIModelAssistant";
 
 interface ModelForm {
   name: string;
@@ -197,6 +198,26 @@ export default function ModelEditor() {
               {isSaving ? "Saving..." : "Save Model"}
             </Button>
           </div>
+
+          {/* AI Model Assistant - only show for new models */}
+          {!isEditing && (
+            <AIModelAssistant
+              onModelFound={(modelData) => {
+                setForm({
+                  name: modelData.name,
+                  version: modelData.version,
+                  provider: modelData.provider,
+                  category: modelData.category,
+                  description: modelData.description,
+                  release_date: modelData.release_date,
+                  parameters: modelData.parameters,
+                  context_window: modelData.context_window,
+                  pricing: modelData.pricing,
+                  benchmarks: JSON.stringify(modelData.benchmarks || {}, null, 2),
+                });
+              }}
+            />
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>

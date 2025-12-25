@@ -40,6 +40,7 @@ const CATEGORIES = [
   "models",
   "opinion",
   "explainers",
+  "video",
 ];
 
 const IMPACT_LEVELS = ["low", "medium", "high"];
@@ -54,6 +55,7 @@ interface ArticleForm {
   category: ArticleCategory;
   author: string;
   image_url: string;
+  video_url: string;
   reading_time: number;
   is_breaking: boolean;
   is_featured: boolean;
@@ -75,6 +77,7 @@ const initialForm: ArticleForm = {
   category: "research",
   author: "",
   image_url: "",
+  video_url: "",
   reading_time: 5,
   is_breaking: false,
   is_featured: false,
@@ -162,6 +165,7 @@ export default function ArticleEditor() {
         category: data.category,
         author: data.author,
         image_url: data.image_url || "",
+        video_url: (data as any).video_url || "",
         reading_time: data.reading_time,
         is_breaking: data.is_breaking,
         is_featured: data.is_featured,
@@ -215,6 +219,7 @@ export default function ArticleEditor() {
       category: form.category,
       author: form.author,
       image_url: form.image_url || null,
+      video_url: form.video_url || null,
       reading_time: form.reading_time,
       is_breaking: form.is_breaking,
       is_featured: form.is_featured,
@@ -479,6 +484,23 @@ export default function ArticleEditor() {
                     }
                     label="Featured Image"
                   />
+
+                  {form.category === "video" && (
+                    <div>
+                      <Label htmlFor="video_url">Video URL</Label>
+                      <Input
+                        id="video_url"
+                        value={form.video_url}
+                        onChange={(e) =>
+                          setForm((prev) => ({ ...prev, video_url: e.target.value }))
+                        }
+                        placeholder="YouTube or Vimeo URL"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Paste a YouTube or Vimeo video URL
+                      </p>
+                    </div>
+                  )}
 
                   <div>
                     <Label htmlFor="reading_time">Reading Time (minutes)</Label>
