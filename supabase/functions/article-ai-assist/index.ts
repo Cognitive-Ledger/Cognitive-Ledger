@@ -89,60 +89,111 @@ Write a publication-ready article of 1000-2000 words with a compelling headline 
   return prompts[action];
 }
 
-async function fetchWebContent(query: string): Promise<string> {
-  console.log("Fetching web content for query:", query);
+// Use Jina Reader API to scrape web content as markdown
+async function scrapeWithJina(url: string): Promise<string> {
+  console.log("Scraping URL with Jina Reader:", url);
   
-  // Use multiple search URLs to gather information
-  const searchUrls = [
-    `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=3&format=json`,
-  ];
-  
-  let researchContent = "";
-  
-  // Try to fetch from Wikipedia API for factual information
   try {
-    const wikiSearchResponse = await fetch(searchUrls[0]);
-    if (wikiSearchResponse.ok) {
-      const wikiData = await wikiSearchResponse.json();
-      const titles = wikiData[1] || [];
-      const descriptions = wikiData[2] || [];
-      const urls = wikiData[3] || [];
-      
-      if (titles.length > 0) {
-        researchContent += "## Wikipedia Research Results\n\n";
-        for (let i = 0; i < titles.length; i++) {
-          researchContent += `### ${titles[i]}\n`;
-          researchContent += `${descriptions[i]}\n`;
-          researchContent += `Source: ${urls[i]}\n\n`;
-          
-          // Fetch full article extract
-          try {
-            const extractUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(titles[i])}`;
-            const extractResponse = await fetch(extractUrl);
-            if (extractResponse.ok) {
-              const extractData = await extractResponse.json();
-              if (extractData.extract) {
-                researchContent += `**Summary:** ${extractData.extract}\n\n`;
-              }
-            }
-          } catch (e) {
-            console.log("Could not fetch extract for:", titles[i]);
-          }
+    const response = await fetch(`https://r.jina.ai/${url}`, {
+      method: "GET",
+      headers: {
+        "Accept": "text/markdown",
+        "X-Return-Format": "markdown",
+        "X-No-Cache": "true",
+      },
+    });
+
+    if (!response.ok) {
+      console.log("Jina Reader error:", response.status);
+      return "";
+    }
+
+    const markdown = await response.text();
+    // Limit content to prevent token overflow
+    return markdown.substring(0, 15000);
+  } catch (error) {
+    console.log("Jina Reader fetch error:", error);
+    return "";
+  }
+}
+
+// Search using DuckDuckGo HTML (no API key needed)
+async function searchWeb(query: string): Promise<string[]> {
+  console.log("Searching for:", query);
+  
+  const urls: string[] = [];
+  
+  // Use Hacker News search for tech topics (reliable API)
+  try {
+    const hnUrl = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=5`;
+    const hnResponse = await fetch(hnUrl);
+    if (hnResponse.ok) {
+      const hnData = await hnResponse.json();
+      for (const hit of hnData.hits || []) {
+        if (hit.url) {
+          urls.push(hit.url);
         }
       }
+    }
+  } catch (error) {
+    console.log("HN search error:", error);
+  }
+
+  // Add Wikipedia article if relevant
+  try {
+    const wikiUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=2&format=json`;
+    const wikiResponse = await fetch(wikiUrl);
+    if (wikiResponse.ok) {
+      const wikiData = await wikiResponse.json();
+      const wikiUrls = wikiData[3] || [];
+      urls.push(...wikiUrls);
     }
   } catch (error) {
     console.log("Wikipedia search error:", error);
   }
 
-  // Fetch from Hacker News for tech news
+  console.log("Found URLs:", urls.length);
+  return urls.slice(0, 5); // Limit to 5 URLs
+}
+
+async function deepResearch(query: string): Promise<string> {
+  console.log("Starting deep research for:", query);
+  
+  let researchContent = `# Research Results for: "${query}"\n\n`;
+  
+  // Step 1: Find relevant URLs
+  const urls = await searchWeb(query);
+  
+  if (urls.length === 0) {
+    researchContent += "Note: No specific web sources found. Article will be generated based on general knowledge.\n";
+    return researchContent;
+  }
+
+  // Step 2: Scrape each URL using Jina Reader
+  for (const url of urls) {
+    console.log("Processing URL:", url);
+    
+    try {
+      const content = await scrapeWithJina(url);
+      
+      if (content && content.length > 100) {
+        researchContent += `\n---\n## Source: ${url}\n\n`;
+        // Truncate each source to avoid token limits
+        researchContent += content.substring(0, 8000) + "\n";
+      }
+    } catch (error) {
+      console.log("Error processing URL:", url, error);
+    }
+  }
+
+  // Step 3: Add recent news from Hacker News discussions
   try {
-    const hnSearchUrl = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=5`;
-    const hnResponse = await fetch(hnSearchUrl);
+    const hnUrl = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=5`;
+    const hnResponse = await fetch(hnUrl);
     if (hnResponse.ok) {
       const hnData = await hnResponse.json();
       if (hnData.hits && hnData.hits.length > 0) {
-        researchContent += "\n## Recent Tech News & Discussions\n\n";
+        researchContent += "\n---\n## Recent Tech News & Discussions (Hacker News)\n\n";
         for (const hit of hnData.hits) {
           researchContent += `### ${hit.title}\n`;
           if (hit.url) researchContent += `Source: ${hit.url}\n`;
@@ -152,29 +203,31 @@ async function fetchWebContent(query: string): Promise<string> {
       }
     }
   } catch (error) {
-    console.log("HN search error:", error);
+    console.log("HN news fetch error:", error);
   }
 
-  // Fetch from arXiv for academic papers (if AI/ML related)
+  // Step 4: Add arXiv papers for academic content
   if (query.toLowerCase().includes('ai') || query.toLowerCase().includes('machine learning') || 
-      query.toLowerCase().includes('neural') || query.toLowerCase().includes('model')) {
+      query.toLowerCase().includes('neural') || query.toLowerCase().includes('model') ||
+      query.toLowerCase().includes('llm') || query.toLowerCase().includes('gpt')) {
     try {
-      const arxivUrl = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&start=0&max_results=3`;
+      const arxivUrl = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&start=0&max_results=3&sortBy=submittedDate&sortOrder=descending`;
       const arxivResponse = await fetch(arxivUrl);
       if (arxivResponse.ok) {
         const arxivText = await arxivResponse.text();
-        // Simple parsing of arXiv XML response
         const entries = arxivText.match(/<entry>[\s\S]*?<\/entry>/g) || [];
         if (entries.length > 0) {
-          researchContent += "\n## Academic Research Papers\n\n";
+          researchContent += "\n---\n## Academic Research Papers (arXiv)\n\n";
           for (const entry of entries) {
             const title = entry.match(/<title>([\s\S]*?)<\/title>/)?.[1]?.trim() || "";
             const summary = entry.match(/<summary>([\s\S]*?)<\/summary>/)?.[1]?.trim() || "";
             const published = entry.match(/<published>([\s\S]*?)<\/published>/)?.[1]?.trim() || "";
+            const link = entry.match(/<id>([\s\S]*?)<\/id>/)?.[1]?.trim() || "";
             if (title) {
               researchContent += `### ${title.replace(/\n/g, ' ')}\n`;
               researchContent += `Published: ${published}\n`;
-              researchContent += `Abstract: ${summary.substring(0, 500).replace(/\n/g, ' ')}...\n\n`;
+              researchContent += `Link: ${link}\n`;
+              researchContent += `Abstract: ${summary.substring(0, 800).replace(/\n/g, ' ')}...\n\n`;
             }
           }
         }
@@ -184,11 +237,7 @@ async function fetchWebContent(query: string): Promise<string> {
     }
   }
 
-  if (!researchContent) {
-    researchContent = `Research query: "${query}"\n\nNote: Limited external data was available. The article will be generated based on general knowledge about this topic.`;
-  }
-
-  console.log("Research content gathered, length:", researchContent.length);
+  console.log("Research complete, content length:", researchContent.length);
   return researchContent;
 }
 
@@ -214,11 +263,11 @@ serve(async (req) => {
 
     let inputContent = content;
     
-    // For deep-research, first gather web content
+    // For deep-research, gather web content using Jina Reader
     if (action === "deep-research") {
       console.log("Starting deep research for:", content);
-      const researchData = await fetchWebContent(content);
-      inputContent = `RESEARCH TOPIC: ${content}\n\n--- GATHERED RESEARCH DATA ---\n\n${researchData}\n\n--- END OF RESEARCH DATA ---\n\nBased on the above research, write a comprehensive article about: ${content}`;
+      const researchData = await deepResearch(content);
+      inputContent = `RESEARCH TOPIC: ${content}\n\n--- GATHERED RESEARCH DATA ---\n\n${researchData}\n\n--- END OF RESEARCH DATA ---\n\nBased on the above research, write a comprehensive, well-sourced article about: ${content}`;
     }
 
     const systemPrompt = getSystemPrompt(action as AssistAction);

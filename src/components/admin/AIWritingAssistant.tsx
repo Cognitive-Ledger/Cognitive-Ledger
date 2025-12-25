@@ -254,7 +254,7 @@ export function AIWritingAssistant({ currentContent, onInsertContent }: AIWritin
 
         {action === "deep-research" && (
           <p className="text-xs text-muted-foreground text-center">
-            Searches Wikipedia, Hacker News, and arXiv for research data
+            Uses Jina Reader to scrape web sources, plus Wikipedia, Hacker News &amp; arXiv
           </p>
         )}
 
