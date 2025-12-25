@@ -361,3 +361,15 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--foreground));
 }
+
+/* Vidstack Video Player Styles */
+media-player {
+  --media-brand: hsl(var(--primary));
+  --media-focus-ring-color: hsl(var(--primary));
+  width: 100%;
+  height: 100%;
+}
+
+media-player[data-view-type="video"] {
+  aspect-ratio: 16 / 9;
+}

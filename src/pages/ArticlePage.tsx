@@ -6,6 +6,7 @@ import { ReadingModeToggle } from "@/components/articles/ReadingModeToggle";
 import { ArticleCard } from "@/components/articles/ArticleCard";
 import { EmbedRenderer, SingleEmbed, parseContentWithEmbeds, getUnplacedEmbeds, type Embed } from "@/components/articles/EmbedRenderer";
 import { useArticle, useArticles } from "@/hooks/useArticles";
+import { VideoPlayer } from "@/components/video/VideoPlayer";
 import { Clock, ArrowLeft, Share2, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet-async";
@@ -167,8 +168,21 @@ export default function ArticlePage() {
             </div>
           </header>
 
-          {/* Article Image */}
-          {article.image_url && (
+          {/* Video Player for video articles */}
+          {article.category === "video" && article.video_url && (
+            <figure className="max-w-4xl mb-8">
+              <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                <VideoPlayer
+                  src={article.video_url}
+                  title={article.title}
+                  poster={article.image_url || undefined}
+                />
+              </div>
+            </figure>
+          )}
+
+          {/* Article Image (for non-video articles) */}
+          {article.category !== "video" && article.image_url && (
             <figure className="max-w-4xl mb-8">
               <img
                 src={article.image_url}
