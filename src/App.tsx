@@ -11,6 +11,13 @@ import AIIndex from "./pages/AIIndex";
 import CategoryPage from "./pages/CategoryPage";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import ArticlesList from "./pages/admin/ArticlesList";
+import ArticleEditor from "./pages/admin/ArticleEditor";
+import ModelsList from "./pages/admin/ModelsList";
+import ModelEditor from "./pages/admin/ModelEditor";
+import BreakingNewsList from "./pages/admin/BreakingNewsList";
+import DailyBriefList from "./pages/admin/DailyBriefList";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +41,16 @@ const App = () => (
               <Route path="/models" element={<CategoryPage />} />
               <Route path="/opinion" element={<CategoryPage />} />
               <Route path="/explainers" element={<CategoryPage />} />
+              {/* Admin routes */}
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/articles" element={<ArticlesList />} />
+              <Route path="/admin/articles/new" element={<ArticleEditor />} />
+              <Route path="/admin/articles/:id" element={<ArticleEditor />} />
+              <Route path="/admin/models" element={<ModelsList />} />
+              <Route path="/admin/models/new" element={<ModelEditor />} />
+              <Route path="/admin/models/:id" element={<ModelEditor />} />
+              <Route path="/admin/breaking" element={<BreakingNewsList />} />
+              <Route path="/admin/daily-brief" element={<DailyBriefList />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
