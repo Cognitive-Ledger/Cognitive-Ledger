@@ -263,6 +263,87 @@
   }
 }
 
+  /* Article content styling for HTML from rich text editor */
+  .article-content {
+    @apply text-body-text;
+  }
+
+  .article-content h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    @apply text-3xl md:text-4xl font-medium leading-tight tracking-tight mb-6 mt-8 text-headline;
+  }
+
+  .article-content h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    @apply text-2xl md:text-3xl font-medium leading-snug mb-4 mt-8 text-headline;
+  }
+
+  .article-content h3 {
+    font-family: 'Playfair Display', Georgia, serif;
+    @apply text-xl md:text-2xl font-medium leading-snug mb-3 mt-6 text-headline;
+  }
+
+  .article-content p {
+    @apply text-base md:text-lg leading-relaxed mb-6;
+  }
+
+  .article-content ul,
+  .article-content ol {
+    @apply mb-6 pl-6 space-y-2;
+  }
+
+  .article-content ul {
+    @apply list-disc;
+  }
+
+  .article-content ol {
+    @apply list-decimal;
+  }
+
+  .article-content li {
+    @apply text-base md:text-lg leading-relaxed;
+  }
+
+  .article-content li p {
+    @apply mb-2;
+  }
+
+  .article-content blockquote {
+    @apply border-l-4 border-primary pl-6 my-6 italic text-muted-foreground;
+  }
+
+  .article-content a {
+    @apply text-primary underline hover:no-underline;
+  }
+
+  .article-content strong {
+    @apply font-semibold text-foreground;
+  }
+
+  .article-content em {
+    @apply italic;
+  }
+
+  .article-content code {
+    @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono;
+  }
+
+  .article-content pre {
+    @apply bg-muted p-4 rounded-md overflow-x-auto mb-6;
+  }
+
+  .article-content pre code {
+    @apply bg-transparent p-0;
+  }
+
+  .article-content img {
+    @apply max-w-full rounded-lg my-6;
+  }
+
+  .article-content hr {
+    @apply border-divider my-8;
+  }
+
 /* Custom scrollbar for editorial feel */
 ::-webkit-scrollbar {
   width: 8px;

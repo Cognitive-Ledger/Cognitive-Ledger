@@ -22,39 +22,14 @@ function ArticleContent({ content, embeds }: { content: string; embeds: Embed[] 
           return <SingleEmbed key={`embed-${partIndex}`} embed={part.embed} />;
         }
         
-        // Render text content with paragraph parsing
-        return part.content.split("\n\n").map((paragraph, index) => {
-          const key = `${partIndex}-${index}`;
-          if (paragraph.startsWith("**") && paragraph.includes(":**")) {
-            const [title, ...contentParts] = paragraph.split(":");
-            return (
-              <div key={key} className="mb-6">
-                <h3 className="font-serif text-lg font-semibold mb-2">
-                  {title.replace(/\*\*/g, "")}
-                </h3>
-                <p className="body-text">{contentParts.join(":").trim()}</p>
-              </div>
-            );
-          }
-          if (paragraph.startsWith("- ")) {
-            const items = paragraph.split("\n").filter((l) => l.startsWith("- "));
-            return (
-              <ul key={key} className="list-disc list-inside mb-6 space-y-1">
-                {items.map((item, i) => (
-                  <li key={i} className="body-text">
-                    {item.replace("- ", "")}
-                  </li>
-                ))}
-              </ul>
-            );
-          }
-          if (!paragraph.trim()) return null;
-          return (
-            <p key={key} className="body-text mb-6">
-              {paragraph}
-            </p>
-          );
-        });
+        // Render HTML content from rich text editor
+        return (
+          <div 
+            key={`text-${partIndex}`}
+            className="article-content"
+            dangerouslySetInnerHTML={{ __html: part.content }} 
+          />
+        );
       })}
     </>
   );
