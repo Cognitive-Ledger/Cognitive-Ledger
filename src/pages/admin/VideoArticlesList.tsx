@@ -92,11 +92,17 @@ export default function VideoArticlesList() {
                 <tr key={article.id} className="border-t border-border">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      {article.video_url && (
-                        <div className="w-16 h-10 bg-muted rounded flex items-center justify-center">
+                      <div className="w-16 h-10 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {article.image_url ? (
+                          <img 
+                            src={article.image_url} 
+                            alt="" 
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
                           <Video className="w-5 h-5 text-muted-foreground" />
-                        </div>
-                      )}
+                        )}
+                      </div>
                       <div className="font-medium">{article.title}</div>
                     </div>
                   </td>

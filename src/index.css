@@ -411,3 +411,19 @@
   --media-slider-thumb-size: 10px;
   --media-slider-track-height: 3px;
 }
+
+/* YouTube/Vimeo embed styles */
+.video-player.youtube-embed,
+.video-player.vimeo-embed {
+  position: relative;
+}
+
+.video-player.youtube-embed iframe,
+.video-player.vimeo-embed iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
