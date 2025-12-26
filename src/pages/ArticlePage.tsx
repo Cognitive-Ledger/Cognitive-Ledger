@@ -176,6 +176,27 @@ export default function ArticlePage() {
                   src={article.video_url}
                   title={article.title}
                   poster={article.image_url || undefined}
+                  textTracks={
+                    article.embeds && Array.isArray(article.embeds)
+                      ? (() => {
+                          const captionEmbed = (article.embeds as unknown[]).find(
+                            (e: unknown) => typeof e === 'object' && e !== null && (e as Record<string, unknown>).type === 'captions'
+                          );
+                          if (captionEmbed && typeof captionEmbed === 'object') {
+                            const tracks = (captionEmbed as Record<string, unknown>).tracks;
+                            if (Array.isArray(tracks)) {
+                              return tracks.map((t: unknown) => ({
+                                src: (t as Record<string, string>).src,
+                                label: (t as Record<string, string>).label,
+                                language: (t as Record<string, string>).language || 'en',
+                                kind: 'subtitles' as const,
+                              }));
+                            }
+                          }
+                          return [];
+                        })()
+                      : []
+                  }
                 />
               </div>
             </figure>
