@@ -2,131 +2,103 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
-import { TrendingUp, Image as ImageIcon, BarChart3, GitBranch } from "lucide-react";
+import { TrendingUp, Image as ImageIcon, BarChart3, GitBranch, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface VisualContentProps {
   type: "chart" | "graph" | "diagram" | "image";
   description: string;
-  data?: any;
+  articleContext?: string;
 }
 
 // Color palette for charts
 const COLORS = ["hsl(var(--primary))", "hsl(var(--accent))", "hsl(var(--secondary))", "#8884d8", "#82ca9d", "#ffc658"];
 
-// Generate mock data based on description
-function generateChartData(description: string): any[] {
-  const lowerDesc = description.toLowerCase();
-  
-  // Try to extract meaningful patterns from description
-  if (lowerDesc.includes("performance") || lowerDesc.includes("benchmark")) {
-    return [
-      { name: "GPT-4", value: 86, fullMark: 100 },
-      { name: "Claude 3", value: 83, fullMark: 100 },
-      { name: "Gemini", value: 81, fullMark: 100 },
-      { name: "Llama 3", value: 78, fullMark: 100 },
-      { name: "Mistral", value: 74, fullMark: 100 },
-    ];
-  }
-  
-  if (lowerDesc.includes("growth") || lowerDesc.includes("trend") || lowerDesc.includes("over time")) {
-    return [
-      { name: "2020", value: 15, growth: 10 },
-      { name: "2021", value: 28, growth: 18 },
-      { name: "2022", value: 45, growth: 35 },
-      { name: "2023", value: 72, growth: 58 },
-      { name: "2024", value: 95, growth: 82 },
-      { name: "2025", value: 120, growth: 100 },
-    ];
-  }
-  
-  if (lowerDesc.includes("market") || lowerDesc.includes("share") || lowerDesc.includes("distribution")) {
-    return [
-      { name: "OpenAI", value: 35 },
-      { name: "Google", value: 25 },
-      { name: "Microsoft", value: 18 },
-      { name: "Anthropic", value: 12 },
-      { name: "Others", value: 10 },
-    ];
-  }
-  
-  if (lowerDesc.includes("comparison") || lowerDesc.includes("versus") || lowerDesc.includes("vs")) {
-    return [
-      { name: "Speed", modelA: 85, modelB: 78 },
-      { name: "Accuracy", modelA: 92, modelB: 88 },
-      { name: "Cost", modelA: 60, modelB: 75 },
-      { name: "Context", modelA: 90, modelB: 85 },
-      { name: "Safety", modelA: 88, modelB: 92 },
-    ];
-  }
-  
-  // Default data
-  return [
-    { name: "Category A", value: 40 },
-    { name: "Category B", value: 30 },
-    { name: "Category C", value: 20 },
-    { name: "Category D", value: 10 },
-  ];
+interface ChartData {
+  chartType: string;
+  title: string;
+  data: Array<Record<string, unknown>>;
+  xAxisLabel?: string;
+  yAxisLabel?: string;
 }
 
-function generateDiagramSteps(description: string): string[] {
-  const lowerDesc = description.toLowerCase();
-  
-  if (lowerDesc.includes("training") || lowerDesc.includes("pipeline")) {
-    return [
-      "Data Collection & Preprocessing",
-      "Tokenization & Embedding",
-      "Pre-training on Large Corpus",
-      "Fine-tuning on Task Data",
-      "RLHF Alignment",
-      "Evaluation & Deployment"
-    ];
-  }
-  
-  if (lowerDesc.includes("architecture") || lowerDesc.includes("transformer")) {
-    return [
-      "Input Embedding Layer",
-      "Multi-Head Self-Attention",
-      "Feed-Forward Network",
-      "Layer Normalization",
-      "Output Projection",
-      "Softmax & Generation"
-    ];
-  }
-  
-  if (lowerDesc.includes("inference") || lowerDesc.includes("process")) {
-    return [
-      "User Input",
-      "Tokenization",
-      "Model Processing",
-      "Token Generation",
-      "Response Assembly",
-      "Output Delivery"
-    ];
-  }
-  
-  return [
-    "Step 1: Input",
-    "Step 2: Processing",
-    "Step 3: Analysis",
-    "Step 4: Output"
-  ];
+interface DiagramData {
+  title: string;
+  steps: string[];
 }
 
-export function ChartRenderer({ description }: { description: string }) {
-  const data = generateChartData(description);
-  const lowerDesc = description.toLowerCase();
-  
-  // Determine chart type based on description
-  const isPie = lowerDesc.includes("share") || lowerDesc.includes("distribution") || lowerDesc.includes("breakdown");
-  const isLine = lowerDesc.includes("trend") || lowerDesc.includes("over time") || lowerDesc.includes("growth");
-  const isComparison = lowerDesc.includes("comparison") || lowerDesc.includes("versus") || lowerDesc.includes("vs");
+interface ImageData {
+  url: string;
+  alt: string;
+}
+
+export function ChartRenderer({ description, articleContext }: { description: string; articleContext?: string }) {
+  const [chartData, setChartData] = useState<ChartData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchChartData = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("generate-visual", {
+          body: { type: "chart", description, articleContext },
+        });
+
+        if (error) throw error;
+        if (data?.data) {
+          setChartData(data.data);
+        }
+      } catch (err) {
+        console.error("Error fetching chart data:", err);
+        setError("Failed to generate chart");
+        // Fallback to default data
+        setChartData({
+          chartType: "bar",
+          title: description,
+          data: [
+            { name: "Category A", value: 40 },
+            { name: "Category B", value: 30 },
+            { name: "Category C", value: 20 },
+            { name: "Category D", value: 10 },
+          ],
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchChartData();
+  }, [description, articleContext]);
+
+  if (isLoading) {
+    return (
+      <Card className="my-6">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            Generating chart...
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-64 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!chartData) return null;
+
+  const { chartType, title, data } = chartData;
+  const isPie = chartType === "pie";
+  const isLine = chartType === "line" || chartType === "area";
+  const hasMultipleKeys = data[0] && Object.keys(data[0]).filter(k => k !== "name").length > 1;
   
   return (
     <Card className="my-6">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <BarChart3 className="h-4 w-4 text-primary" />
-          {description}
+          {title || description}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -144,7 +116,7 @@ export function ChartRenderer({ description }: { description: string }) {
                   dataKey="value"
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                 >
-                  {data.map((entry, index) => (
+                  {data.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -165,15 +137,16 @@ export function ChartRenderer({ description }: { description: string }) {
                 <Tooltip />
                 <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorValue)" />
               </AreaChart>
-            ) : isComparison ? (
+            ) : hasMultipleKeys ? (
               <BarChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="name" className="text-xs" />
                 <YAxis className="text-xs" />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="modelA" fill="hsl(var(--primary))" name="Model A" />
-                <Bar dataKey="modelB" fill="hsl(var(--accent))" name="Model B" />
+                {Object.keys(data[0]).filter(k => k !== "name").map((key, i) => (
+                  <Bar key={key} dataKey={key} fill={COLORS[i % COLORS.length]} />
+                ))}
               </BarChart>
             ) : (
               <BarChart data={data}>
@@ -182,7 +155,7 @@ export function ChartRenderer({ description }: { description: string }) {
                 <YAxis className="text-xs" />
                 <Tooltip />
                 <Bar dataKey="value" fill="hsl(var(--primary))">
-                  {data.map((entry, index) => (
+                  {data.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Bar>
@@ -195,15 +168,62 @@ export function ChartRenderer({ description }: { description: string }) {
   );
 }
 
-export function DiagramRenderer({ description }: { description: string }) {
-  const steps = generateDiagramSteps(description);
+export function DiagramRenderer({ description, articleContext }: { description: string; articleContext?: string }) {
+  const [diagramData, setDiagramData] = useState<DiagramData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDiagramData = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("generate-visual", {
+          body: { type: "diagram", description, articleContext },
+        });
+
+        if (error) throw error;
+        if (data?.data) {
+          setDiagramData(data.data);
+        }
+      } catch (err) {
+        console.error("Error fetching diagram data:", err);
+        // Fallback
+        setDiagramData({
+          title: description,
+          steps: ["Step 1: Input", "Step 2: Processing", "Step 3: Analysis", "Step 4: Output"],
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDiagramData();
+  }, [description, articleContext]);
+
+  if (isLoading) {
+    return (
+      <Card className="my-6">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            Generating diagram...
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-32 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!diagramData) return null;
+
+  const { title, steps } = diagramData;
   
   return (
     <Card className="my-6">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <GitBranch className="h-4 w-4 text-primary" />
-          {description}
+          {title || description}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -229,45 +249,53 @@ export function DiagramRenderer({ description }: { description: string }) {
   );
 }
 
-export function ImagePlaceholder({ description }: { description: string }) {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+export function ImagePlaceholder({ description, articleContext }: { description: string; articleContext?: string }) {
+  const [imageData, setImageData] = useState<ImageData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   useEffect(() => {
-    // Generate a relevant Unsplash image based on keywords
-    const keywords = description.toLowerCase();
-    let query = "artificial+intelligence";
-    
-    if (keywords.includes("robot")) query = "robot+technology";
-    else if (keywords.includes("chip") || keywords.includes("hardware")) query = "computer+chip";
-    else if (keywords.includes("data")) query = "data+visualization";
-    else if (keywords.includes("brain") || keywords.includes("neural")) query = "brain+neural";
-    else if (keywords.includes("healthcare") || keywords.includes("medical")) query = "healthcare+technology";
-    else if (keywords.includes("car") || keywords.includes("autonomous")) query = "autonomous+car";
-    else if (keywords.includes("office") || keywords.includes("workplace")) query = "technology+workplace";
-    
-    // Use a random seed based on description for consistency
-    const seed = description.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const url = `https://images.unsplash.com/photo-${1485827404703 + (seed % 1000000)}-89b55fcc595e?w=800&h=400&fit=crop`;
-    
-    // Fallback to a known AI-related image
-    const fallbackUrl = `https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=400&fit=crop`;
-    
-    setImageUrl(fallbackUrl);
-    setIsLoading(false);
-  }, [description]);
-  
+    const fetchImage = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("generate-visual", {
+          body: { type: "image", description, articleContext },
+        });
+
+        if (error) throw error;
+        if (data?.data) {
+          setImageData(data.data);
+        }
+      } catch (err) {
+        console.error("Error fetching image:", err);
+        // Fallback to Unsplash
+        setImageData({
+          url: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=400&fit=crop",
+          alt: description,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchImage();
+  }, [description, articleContext]);
+
   if (isLoading) {
-    return <Skeleton className="my-6 h-64 w-full" />;
+    return <Skeleton className="my-6 h-64 w-full rounded-lg" />;
   }
+
+  if (!imageData) return null;
   
   return (
     <Card className="my-6 overflow-hidden">
       <div className="relative">
         <img 
-          src={imageUrl || ""} 
-          alt={description}
+          src={imageData.url} 
+          alt={imageData.alt || description}
           className="w-full h-64 object-cover"
+          onError={(e) => {
+            // Fallback on error
+            e.currentTarget.src = "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=400&fit=crop";
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-4">
@@ -281,15 +309,15 @@ export function ImagePlaceholder({ description }: { description: string }) {
   );
 }
 
-export function VisualContentRenderer({ type, description }: VisualContentProps) {
+export function VisualContentRenderer({ type, description, articleContext }: VisualContentProps) {
   switch (type) {
     case "chart":
     case "graph":
-      return <ChartRenderer description={description} />;
+      return <ChartRenderer description={description} articleContext={articleContext} />;
     case "diagram":
-      return <DiagramRenderer description={description} />;
+      return <DiagramRenderer description={description} articleContext={articleContext} />;
     case "image":
-      return <ImagePlaceholder description={description} />;
+      return <ImagePlaceholder description={description} articleContext={articleContext} />;
     default:
       return null;
   }

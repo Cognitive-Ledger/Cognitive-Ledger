@@ -22,6 +22,10 @@ import BreakingNewsList from "./pages/admin/BreakingNewsList";
 import DailyBriefList from "./pages/admin/DailyBriefList";
 import VideoArticlesList from "./pages/admin/VideoArticlesList";
 import VideoArticleEditor from "./pages/admin/VideoArticleEditor";
+import PodcastsList from "./pages/admin/PodcastsList";
+import PodcastEditor from "./pages/admin/PodcastEditor";
+import LiveStreamsList from "./pages/admin/LiveStreamsList";
+import LiveStreamEditor from "./pages/admin/LiveStreamEditor";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +65,12 @@ const App = () => (
               <Route path="/admin/models/:id" element={<ModelEditor />} />
               <Route path="/admin/breaking" element={<BreakingNewsList />} />
               <Route path="/admin/daily-brief" element={<DailyBriefList />} />
+              <Route path="/admin/podcasts" element={<PodcastsList />} />
+              <Route path="/admin/podcasts/new" element={<PodcastEditor />} />
+              <Route path="/admin/podcasts/:id" element={<PodcastEditor />} />
+              <Route path="/admin/streams" element={<LiveStreamsList />} />
+              <Route path="/admin/streams/new" element={<LiveStreamEditor />} />
+              <Route path="/admin/streams/:id" element={<LiveStreamEditor />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
