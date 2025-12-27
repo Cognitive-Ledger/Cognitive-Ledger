@@ -74,6 +74,8 @@ export default function LiveStreamsList() {
   };
 
   const toggleLive = async (id: string, isLive: boolean) => {
+    const stream = streams?.find(s => s.id === id);
+    
     const { error } = await supabase
       .from("live_streams")
       .update({ is_live: !isLive })
@@ -86,10 +88,35 @@ export default function LiveStreamsList() {
         variant: "destructive",
       });
     } else {
-      toast({
-        title: isLive ? "Stream ended" : "Stream is now live!",
-        description: isLive ? "The stream has been marked as offline" : "Viewers will be notified",
-      });
+      // Send notification when going live
+      if (!isLive && stream) {
+        try {
+          await supabase.functions.invoke("send-stream-notification", {
+            body: {
+              streamId: id,
+              streamTitle: stream.title,
+              streamDescription: stream.description,
+              scheduledAt: stream.scheduled_at,
+              notificationType: "live",
+            },
+          });
+          toast({
+            title: "🔴 Stream is now live!",
+            description: "Subscribers have been notified via email",
+          });
+        } catch (notifyError) {
+          console.error("Failed to send notification:", notifyError);
+          toast({
+            title: "Stream is now live!",
+            description: "Stream started but notification failed to send",
+          });
+        }
+      } else {
+        toast({
+          title: "Stream ended",
+          description: "The stream has been marked as offline",
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["admin-streams"] });
     }
   };
