@@ -15,12 +15,13 @@ import {
   Bookmark, 
   Mail, 
   Zap, 
-  Shield,
-  Star,
   Crown,
-  Sparkles
+  Sparkles,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SubscriptionModalProps {
   open: boolean;
@@ -30,8 +31,8 @@ interface SubscriptionModalProps {
 interface Plan {
   id: string;
   name: string;
-  price: string;
-  period: string;
+  monthlyPrice: number;
+  annualPrice: number;
   description: string;
   features: string[];
   highlighted?: boolean;
@@ -43,8 +44,8 @@ const plans: Plan[] = [
   {
     id: "insider",
     name: "Insider",
-    price: "$9",
-    period: "/month",
+    monthlyPrice: 10,
+    annualPrice: 100,
     description: "Essential access to premium AI journalism",
     icon: <Zap className="h-6 w-6" />,
     features: [
@@ -59,8 +60,8 @@ const plans: Plan[] = [
   {
     id: "professional",
     name: "Professional",
-    price: "$29",
-    period: "/month",
+    monthlyPrice: 20,
+    annualPrice: 200,
     description: "For professionals who need comprehensive AI coverage",
     icon: <Crown className="h-6 w-6" />,
     badge: "Most Popular",
@@ -76,48 +77,64 @@ const plans: Plan[] = [
       "Team sharing (up to 3)",
     ],
   },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    price: "$99",
-    period: "/month",
-    description: "Complete intelligence platform for teams",
-    icon: <Shield className="h-6 w-6" />,
-    features: [
-      "Everything in Professional",
-      "Unlimited team members",
-      "Custom integrations",
-      "Dedicated account manager",
-      "Private briefings",
-      "White-label options",
-      "Advanced analytics dashboard",
-      "SLA & priority support",
-    ],
-  },
 ];
 
 export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps) {
   const [selectedPlan, setSelectedPlan] = useState<string>("professional");
   const [isAnnual, setIsAnnual] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  const handleSubscribe = (planId: string) => {
-    toast({
-      title: "Coming Soon",
-      description: `${plans.find(p => p.id === planId)?.name} subscription will be available soon. We'll notify you when it launches!`,
-    });
-    onOpenChange(false);
+  const handleSubscribe = async (planId: string) => {
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("creem-checkout", {
+        body: {
+          planId,
+          isAnnual,
+          email: user?.email || "",
+          userId: user?.id || "",
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        throw new Error("No checkout URL received");
+      }
+    } catch (error: unknown) {
+      console.error("Checkout error:", error);
+      toast({
+        title: "Payment Coming Soon",
+        description: `${plan.name} subscription will be available soon. We'll notify you when it launches!`,
+      });
+      onOpenChange(false);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const getAnnualPrice = (monthlyPrice: string) => {
-    const monthly = parseInt(monthlyPrice.replace("$", ""));
-    const annual = Math.round(monthly * 10); // 2 months free
-    return `$${annual}`;
+  const formatPrice = (plan: Plan) => {
+    const price = isAnnual ? plan.annualPrice : plan.monthlyPrice;
+    return `$${price}`;
+  };
+
+  const getSavingsPercent = (plan: Plan) => {
+    const monthlyTotal = plan.monthlyPrice * 12;
+    const savings = monthlyTotal - plan.annualPrice;
+    return Math.round((savings / monthlyTotal) * 100);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] p-0 gap-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[800px] p-0 gap-0 overflow-hidden">
         <DialogHeader className="p-6 pb-4 bg-gradient-to-br from-primary/5 via-background to-primary/10 border-b">
           <div className="flex items-center justify-between">
             <div>
@@ -173,16 +190,12 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
               <Bookmark className="h-4 w-4 text-primary" />
               <span>Research Reports</span>
             </div>
-            <div className="flex items-center gap-2 text-sm whitespace-nowrap">
-              <Star className="h-4 w-4 text-primary" />
-              <span>Expert Q&As</span>
-            </div>
           </div>
         </div>
 
         {/* Plans grid */}
         <div className="p-6">
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 gap-4">
             {plans.map((plan) => (
               <div
                 key={plan.id}
@@ -213,14 +226,14 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
 
                 <div className="mb-4">
                   <span className="text-3xl font-bold">
-                    {isAnnual ? getAnnualPrice(plan.price) : plan.price}
+                    {formatPrice(plan)}
                   </span>
                   <span className="text-muted-foreground">
-                    {isAnnual ? "/year" : plan.period}
+                    {isAnnual ? "/year" : "/month"}
                   </span>
                   {isAnnual && (
                     <p className="text-xs text-green-600 mt-1">
-                      {plan.price}/mo billed annually
+                      Save {getSavingsPercent(plan)}% with annual billing
                     </p>
                   )}
                 </div>
@@ -246,7 +259,11 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
                   }}
                   variant={plan.highlighted ? "default" : "outline"}
                   className="w-full"
+                  disabled={isLoading}
                 >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : null}
                   {plan.highlighted ? "Get Started" : "Choose Plan"}
                 </Button>
               </div>
@@ -256,7 +273,7 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
 
         <div className="px-6 py-4 border-t bg-muted/30 text-center text-sm text-muted-foreground">
           <p>
-            Cancel anytime • 7-day free trial on all plans • Secure payment with Stripe
+            Cancel anytime • 7-day free trial on all plans • Secure payment powered by Creem
           </p>
         </div>
       </DialogContent>

@@ -11,6 +11,8 @@ import {
   LogOut,
   ChevronLeft,
   Video,
+  Headphones,
+  Radio,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,6 +26,8 @@ const navigation = [
   { name: "Articles", href: "/admin/articles", icon: FileText },
   { name: "Videos", href: "/admin/videos", icon: Video },
   { name: "AI Models", href: "/admin/models", icon: Cpu },
+  { name: "Podcasts", href: "/admin/podcasts", icon: Headphones },
+  { name: "Live Streams", href: "/admin/streams", icon: Radio },
   { name: "Breaking News", href: "/admin/breaking", icon: Zap },
   { name: "Daily Brief", href: "/admin/daily-brief", icon: Calendar },
 ];
