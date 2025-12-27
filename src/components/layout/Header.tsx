@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, X, Search, LogOut, User, Settings, ChevronDown } from "lucide-react";
+import { SearchDialog } from "./SearchDialog";
+import { SubscriptionModal } from "@/components/subscription/SubscriptionModal";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useHasEditorialAccess } from "@/hooks/useUserRole";
@@ -26,6 +28,8 @@ const navigation = [
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { hasAccess: hasEditorialAccess } = useHasEditorialAccess();
   const navigate = useNavigate();
@@ -49,7 +53,12 @@ export function Header() {
             })}
           </span>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" className="text-xs font-medium">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs font-medium"
+              onClick={() => setSubscriptionOpen(true)}
+            >
               Subscribe
             </Button>
             {user ? (
@@ -137,7 +146,10 @@ export function Header() {
                 {item.name}
               </Link>
             ))}
-            <button className="ml-4 p-1.5 text-body-text hover:text-primary transition-colors">
+            <button 
+              onClick={() => setSearchOpen(true)}
+              className="ml-4 p-1.5 text-body-text hover:text-primary transition-colors"
+            >
               <Search className="h-4 w-4" />
             </button>
           </div>
@@ -150,7 +162,10 @@ export function Header() {
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <button className="p-2 text-body-text">
+            <button 
+              onClick={() => setSearchOpen(true)}
+              className="p-2 text-body-text"
+            >
               <Search className="h-5 w-5" />
             </button>
           </div>
@@ -174,6 +189,9 @@ export function Header() {
           )}
         </div>
       </nav>
+      
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      <SubscriptionModal open={subscriptionOpen} onOpenChange={setSubscriptionOpen} />
     </header>
   );
 }
