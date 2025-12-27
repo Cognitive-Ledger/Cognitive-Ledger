@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -9,7 +10,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Sparkles, Copy, Check, PenTool, Globe } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { Loader2, Sparkles, Copy, Check, PenTool, Globe, Wand2, FileText, Zap, BookOpen, BarChart3, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -22,6 +26,9 @@ type AssistAction =
   | "improve-writing"
   | "write-article"
   | "deep-research";
+
+type ArticleTone = "professional" | "conversational" | "academic" | "engaging";
+type ArticleLength = "short" | "medium" | "long" | "comprehensive";
 
 interface StructuredArticle {
   title: string;
@@ -46,40 +53,56 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
-  const actionLabels: Record<AssistAction, { label: string; description: string; icon?: React.ReactNode }> = {
+  // Advanced options for write-article
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [tone, setTone] = useState<ArticleTone>("professional");
+  const [length, setLength] = useState<ArticleLength>("medium");
+  const [includeDataViz, setIncludeDataViz] = useState(true);
+  const [includeSources, setIncludeSources] = useState(true);
+  const [includeQuotes, setIncludeQuotes] = useState(true);
+  const [targetKeywords, setTargetKeywords] = useState("");
+  const [creativityLevel, setCreativityLevel] = useState([50]);
+
+  const actionLabels: Record<AssistAction, { label: string; description: string; icon: React.ReactNode }> = {
     "write-article": {
       label: "✍️ Write Article",
-      description: "Generate a complete article from a topic or prompt",
+      description: "Generate a complete, publication-ready article with advanced options",
       icon: <PenTool className="h-4 w-4" />,
     },
     "deep-research": {
       label: "🔍 Deep Research",
-      description: "Research the web and write a well-sourced article",
+      description: "Research the web and write a well-sourced article with data visualizations",
       icon: <Globe className="h-4 w-4" />,
     },
     "generate-outline": {
-      label: "Generate Outline",
-      description: "Create an article outline from a topic or idea",
+      label: "📋 Generate Outline",
+      description: "Create a structured article outline with key sections",
+      icon: <FileText className="h-4 w-4" />,
     },
     "expand-section": {
-      label: "Expand Section",
+      label: "📝 Expand Section",
       description: "Expand on a topic or section with more detail",
+      icon: <BookOpen className="h-4 w-4" />,
     },
     "simplify": {
-      label: "Simplify Content",
+      label: "✨ Simplify Content",
       description: "Rewrite content in simpler terms for general audience",
+      icon: <Wand2 className="h-4 w-4" />,
     },
     "make-technical": {
-      label: "Make Technical",
+      label: "⚙️ Make Technical",
       description: "Add technical depth and detail to content",
+      icon: <Zap className="h-4 w-4" />,
     },
     "generate-excerpt": {
-      label: "Generate Excerpt",
+      label: "📌 Generate Excerpt",
       description: "Create a compelling summary/excerpt from content",
+      icon: <Sparkles className="h-4 w-4" />,
     },
     "improve-writing": {
-      label: "Improve Writing",
+      label: "🎨 Improve Writing",
       description: "Enhance clarity, flow, and engagement",
+      icon: <Sparkles className="h-4 w-4" />,
     },
   };
 
@@ -118,8 +141,28 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
     setStructuredResult(null);
 
     try {
+      // Build enhanced prompt for write-article with options
+      let enhancedContent = inputText;
+      
+      if (action === "write-article" || action === "deep-research") {
+        const options = {
+          tone,
+          length,
+          includeDataViz,
+          includeSources,
+          includeQuotes,
+          targetKeywords: targetKeywords.trim() || undefined,
+          creativityLevel: creativityLevel[0],
+        };
+        
+        enhancedContent = JSON.stringify({
+          topic: inputText,
+          options,
+        });
+      }
+
       const response = await supabase.functions.invoke("article-ai-assist", {
-        body: { action, content: inputText },
+        body: { action, content: enhancedContent },
       });
 
       if (response.error) {
@@ -136,7 +179,7 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
       toast({
         title: action === "deep-research" ? "Research complete" : "Content generated",
         description: action === "deep-research" 
-          ? "Article generated with web research" 
+          ? "Article generated with web research and visualizations" 
           : "AI has generated your content",
       });
     } catch (error) {
@@ -182,9 +225,9 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
   const getPlaceholder = () => {
     switch (action) {
       case "write-article":
-        return "Enter the topic, headline, or detailed prompt for your article...\n\nExample: \"The impact of GPT-5 on software development workflows\"";
+        return "Enter the topic for your article...\n\nExamples:\n• The impact of GPT-5 on software development\n• How AI is transforming healthcare diagnostics\n• Analysis of the latest AI regulation proposals";
       case "deep-research":
-        return "Enter the topic to research and write about...\n\nExample: \"Latest developments in multimodal AI models 2024\"";
+        return "Enter the topic to research...\n\nExamples:\n• Latest developments in multimodal AI models 2025\n• Comparison of open-source vs closed-source LLMs\n• AI adoption trends in enterprise software";
       case "generate-outline":
         return "Enter a topic or idea for the article...";
       case "expand-section":
@@ -196,11 +239,13 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
 
   const getButtonLabel = () => {
     if (isLoading) {
-      return action === "deep-research" ? "Researching..." : "Generating...";
+      if (action === "deep-research") return "Researching & generating visuals...";
+      if (action === "write-article") return "Writing article...";
+      return "Generating...";
     }
     switch (action) {
       case "write-article":
-        return "Write Article";
+        return "Generate Article";
       case "deep-research":
         return "Research & Write";
       default:
@@ -208,56 +253,185 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
     }
   };
 
+  const isArticleAction = action === "write-article" || action === "deep-research";
+
   return (
-    <Card>
-      <CardHeader>
+    <Card className="border-primary/20">
+      <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-primary" />
           AI Writing Assistant
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Action selector */}
         <div>
+          <Label className="text-xs text-muted-foreground mb-2 block">Select Action</Label>
           <Select
             value={action}
             onValueChange={(value) => setAction(value as AssistAction)}
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-11">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="write-article" className="font-medium">
-                ✍️ Write Article
+              <SelectItem value="write-article" className="py-3">
+                <div className="flex items-center gap-2">
+                  <PenTool className="h-4 w-4" />
+                  <div>
+                    <div className="font-medium">Write Article</div>
+                    <div className="text-xs text-muted-foreground">Full article with advanced options</div>
+                  </div>
+                </div>
               </SelectItem>
-              <SelectItem value="deep-research" className="font-medium">
-                🔍 Deep Research
+              <SelectItem value="deep-research" className="py-3">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4" />
+                  <div>
+                    <div className="font-medium">Deep Research</div>
+                    <div className="text-xs text-muted-foreground">Web research + charts + images</div>
+                  </div>
+                </div>
               </SelectItem>
-              <SelectItem value="generate-outline">Generate Outline</SelectItem>
-              <SelectItem value="expand-section">Expand Section</SelectItem>
-              <SelectItem value="simplify">Simplify Content</SelectItem>
-              <SelectItem value="make-technical">Make Technical</SelectItem>
-              <SelectItem value="generate-excerpt">Generate Excerpt</SelectItem>
-              <SelectItem value="improve-writing">Improve Writing</SelectItem>
+              <SelectItem value="generate-outline">📋 Generate Outline</SelectItem>
+              <SelectItem value="expand-section">📝 Expand Section</SelectItem>
+              <SelectItem value="simplify">✨ Simplify Content</SelectItem>
+              <SelectItem value="make-technical">⚙️ Make Technical</SelectItem>
+              <SelectItem value="generate-excerpt">📌 Generate Excerpt</SelectItem>
+              <SelectItem value="improve-writing">🎨 Improve Writing</SelectItem>
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1.5">
             {actionLabels[action].description}
           </p>
         </div>
 
-        <Textarea
-          placeholder={getPlaceholder()}
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          rows={action === "write-article" || action === "deep-research" ? 6 : 4}
-          className={action === "deep-research" ? "border-primary/50" : ""}
-        />
+        {/* Topic/Prompt input */}
+        <div>
+          <Label className="text-xs text-muted-foreground mb-2 block">
+            {isArticleAction ? "Article Topic" : "Input"}
+          </Label>
+          <Textarea
+            placeholder={getPlaceholder()}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            rows={isArticleAction ? 5 : 4}
+            className={action === "deep-research" ? "border-primary/50 focus:border-primary" : ""}
+          />
+        </div>
 
+        {/* Advanced options for article writing */}
+        {isArticleAction && (
+          <div className="space-y-4">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-sm text-primary hover:underline flex items-center gap-1"
+            >
+              {showAdvanced ? "▼" : "▶"} Advanced Options
+            </button>
+            
+            {showAdvanced && (
+              <div className="space-y-4 p-4 bg-muted/50 rounded-lg border">
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Tone */}
+                  <div>
+                    <Label className="text-xs mb-2 block">Writing Tone</Label>
+                    <Select value={tone} onValueChange={(v) => setTone(v as ArticleTone)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="professional">Professional</SelectItem>
+                        <SelectItem value="conversational">Conversational</SelectItem>
+                        <SelectItem value="academic">Academic</SelectItem>
+                        <SelectItem value="engaging">Engaging/Storytelling</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Length */}
+                  <div>
+                    <Label className="text-xs mb-2 block">Article Length</Label>
+                    <Select value={length} onValueChange={(v) => setLength(v as ArticleLength)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="short">Short (~500 words)</SelectItem>
+                        <SelectItem value="medium">Medium (~1000 words)</SelectItem>
+                        <SelectItem value="long">Long (~1500 words)</SelectItem>
+                        <SelectItem value="comprehensive">Comprehensive (~2500+ words)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Target Keywords */}
+                <div>
+                  <Label className="text-xs mb-2 block">Target Keywords (optional)</Label>
+                  <Input
+                    placeholder="e.g., AI safety, machine learning, neural networks"
+                    value={targetKeywords}
+                    onChange={(e) => setTargetKeywords(e.target.value)}
+                  />
+                </div>
+
+                {/* Creativity slider */}
+                <div>
+                  <Label className="text-xs mb-2 block">
+                    Creativity Level: {creativityLevel[0]}%
+                  </Label>
+                  <Slider
+                    value={creativityLevel}
+                    onValueChange={setCreativityLevel}
+                    max={100}
+                    step={10}
+                    className="mt-2"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                    <span>Factual</span>
+                    <span>Creative</span>
+                  </div>
+                </div>
+
+                {/* Toggle options */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                      <Label className="text-sm">Include data visualizations</Label>
+                    </div>
+                    <Switch checked={includeDataViz} onCheckedChange={setIncludeDataViz} />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <Label className="text-sm">Include source citations</Label>
+                    </div>
+                    <Switch checked={includeSources} onCheckedChange={setIncludeSources} />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Image className="h-4 w-4 text-muted-foreground" />
+                      <Label className="text-sm">Include expert quotes</Label>
+                    </div>
+                    <Switch checked={includeQuotes} onCheckedChange={setIncludeQuotes} />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Generate button */}
         <Button 
           onClick={handleGenerate} 
           disabled={isLoading}
-          className="w-full"
-          variant={action === "deep-research" ? "default" : "default"}
+          className="w-full h-11"
+          size="lg"
         >
           {isLoading ? (
             <>
@@ -266,74 +440,74 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
             </>
           ) : (
             <>
-              {action === "deep-research" ? (
-                <Globe className="mr-2 h-4 w-4" />
-              ) : action === "write-article" ? (
-                <PenTool className="mr-2 h-4 w-4" />
-              ) : (
-                <Sparkles className="mr-2 h-4 w-4" />
-              )}
-              {getButtonLabel()}
+              {actionLabels[action].icon}
+              <span className="ml-2">{getButtonLabel()}</span>
             </>
           )}
         </Button>
 
         {action === "deep-research" && (
-          <p className="text-xs text-muted-foreground text-center">
-            Uses Jina Reader to scrape web sources, plus Wikipedia, Hacker News &amp; arXiv
-          </p>
+          <div className="text-xs text-muted-foreground text-center space-y-1">
+            <p>🌐 Searches multiple engines • 📊 Generates charts & diagrams • 🖼️ Suggests images</p>
+          </div>
         )}
 
+        {/* Results */}
         {result && (
-          <div className="space-y-2">
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Generated Content</Label>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleCopy}>
+                  {copied ? (
+                    <Check className="mr-1 h-3 w-3" />
+                  ) : (
+                    <Copy className="mr-1 h-3 w-3" />
+                  )}
+                  {copied ? "Copied" : "Copy"}
+                </Button>
+              </div>
+            </div>
+            
             {structuredResult ? (
-              <div className="bg-muted rounded-lg p-4 max-h-96 overflow-y-auto space-y-3">
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-1">Title</p>
-                  <p className="text-sm font-semibold">{structuredResult.title}</p>
+              <div className="bg-muted rounded-lg p-4 max-h-[500px] overflow-y-auto space-y-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-primary uppercase tracking-wide">Title</p>
+                  <p className="text-lg font-serif font-medium">{structuredResult.title}</p>
                 </div>
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-1">Excerpt</p>
-                  <p className="text-sm">{structuredResult.excerpt}</p>
+                
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-primary uppercase tracking-wide">Excerpt</p>
+                  <p className="text-sm text-muted-foreground italic">{structuredResult.excerpt}</p>
                 </div>
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-1">Main Content Preview</p>
+                
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-primary uppercase tracking-wide">Main Content Preview</p>
                   <div 
-                    className="text-sm prose prose-sm max-h-32 overflow-y-auto"
-                    dangerouslySetInnerHTML={{ __html: structuredResult.content.substring(0, 500) + "..." }}
+                    className="text-sm prose prose-sm dark:prose-invert max-h-48 overflow-y-auto border rounded p-3 bg-background"
+                    dangerouslySetInnerHTML={{ __html: structuredResult.content.substring(0, 800) + "..." }}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  + Simple version ({structuredResult.simple_content.length} chars) 
-                  + Technical version ({structuredResult.technical_content.length} chars)
-                </p>
+                
+                <div className="flex gap-4 text-xs text-muted-foreground">
+                  <span>✓ Simple version ({Math.round(structuredResult.simple_content.length / 100) * 100}+ chars)</span>
+                  <span>✓ Technical version ({Math.round(structuredResult.technical_content.length / 100) * 100}+ chars)</span>
+                </div>
+                
+                <Button onClick={handleInsertStructured} className="w-full">
+                  Insert All Fields into Editor
+                </Button>
               </div>
             ) : (
-              <div className="bg-muted rounded-lg p-4 max-h-96 overflow-y-auto">
+              <div className="bg-muted rounded-lg p-4 max-h-[400px] overflow-y-auto">
                 <pre className="whitespace-pre-wrap text-sm font-sans">
                   {result}
                 </pre>
-              </div>
-            )}
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleCopy}>
-                {copied ? (
-                  <Check className="mr-2 h-4 w-4" />
-                ) : (
-                  <Copy className="mr-2 h-4 w-4" />
-                )}
-                {copied ? "Copied" : "Copy"}
-              </Button>
-              {structuredResult && onInsertStructuredArticle ? (
-                <Button size="sm" onClick={handleInsertStructured}>
-                  Insert All Fields
-                </Button>
-              ) : (
-                <Button size="sm" onClick={handleInsert}>
+                <Button size="sm" className="mt-3" onClick={handleInsert}>
                   Insert into Editor
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </CardContent>

@@ -16,7 +16,32 @@ type AssistAction =
   | "deep-research"
   | "research-model";
 
-function getSystemPrompt(action: AssistAction): string {
+function getSystemPrompt(action: AssistAction, options?: ArticleOptions): string {
+  const toneInstructions: Record<string, string> = {
+    professional: "Write in a professional, authoritative tone suitable for a major tech publication.",
+    conversational: "Write in a friendly, conversational tone that feels like talking to a knowledgeable friend.",
+    academic: "Write in an academic tone with precise language and rigorous analysis.",
+    engaging: "Write in an engaging, storytelling style that draws readers in with narratives and compelling hooks.",
+  };
+
+  const lengthInstructions: Record<string, string> = {
+    short: "Keep the article concise, around 500 words for main content.",
+    medium: "Write a medium-length article, around 1000 words for main content.",
+    long: "Write a comprehensive article, around 1500 words for main content.",
+    comprehensive: "Write an in-depth, comprehensive article of 2500+ words for main content.",
+  };
+
+  const articleOptions = options ? `
+Additional Instructions:
+- Tone: ${toneInstructions[options.tone] || toneInstructions.professional}
+- Length: ${lengthInstructions[options.length] || lengthInstructions.medium}
+${options.targetKeywords ? `- Target Keywords: Naturally incorporate these keywords: ${options.targetKeywords}` : ""}
+${options.includeDataViz ? `- Include data visualization suggestions: Add placeholders like [CHART: description of chart] or [DIAGRAM: description] or [GRAPH: description] where visual data representations would enhance the article` : ""}
+${options.includeSources ? "- Include source citations: Reference sources with [Source: name/URL] format where appropriate" : ""}
+${options.includeQuotes ? "- Include expert quotes: Add relevant expert opinions or quotes where they strengthen the narrative" : ""}
+- Creativity level: ${options.creativityLevel}% (0=very factual and conservative, 100=very creative and bold)
+` : "";
+
   const prompts: Record<AssistAction, string> = {
     "generate-outline": `You are an expert AI/tech news editor. Create a detailed article outline with:
 - A compelling headline
@@ -61,7 +86,7 @@ Write only the excerpt, nothing else.`,
 - Correcting any errors
 Return the improved version of the text.`,
 
-    "write-article": `You are an expert AI/tech journalist. Write a complete article and return it as a JSON object with the following structure:
+    "write-article": `You are an expert AI/tech journalist for Cognitive Ledger, an authoritative AI news publication. Write a complete article and return it as a JSON object with the following structure:
 
 {
   "title": "The headline of the article",
@@ -70,15 +95,15 @@ Return the improved version of the text.`,
   "simple_content": "A simplified version for non-technical readers in HTML format",
   "technical_content": "A technical deep-dive version for experts in HTML format"
 }
-
+${articleOptions}
 Guidelines:
-- Main content: 800-1500 words, professional journalism style
+- Main content: Professional journalism style with compelling narrative
 - Simple content: Same story but accessible to general audience, no jargon
 - Technical content: Deep technical analysis for developers/researchers
-- Use HTML tags like <p>, <h2>, <h3>, <ul>, <li>, <strong>, <em> for formatting
+- Use HTML tags like <p>, <h2>, <h3>, <ul>, <li>, <strong>, <em>, <blockquote> for formatting
 - Return ONLY valid JSON, no markdown code blocks or extra text`,
 
-    "deep-research": `You are an expert AI/tech journalist. Based on the research provided, write a comprehensive article and return it as a JSON object:
+    "deep-research": `You are an expert AI/tech journalist for Cognitive Ledger. Based on the research provided, write a comprehensive, well-sourced article and return it as a JSON object:
 
 {
   "title": "The headline of the article",
@@ -87,13 +112,16 @@ Guidelines:
   "simple_content": "A simplified version for non-technical readers in HTML format",
   "technical_content": "A technical deep-dive version for experts in HTML format"
 }
-
+${articleOptions}
 Guidelines:
 - Synthesize research from multiple sources with proper attribution
-- Main content: 1000-2000 words
+- Include inline citations like [Source: name] that reference the researched sources
+- Where data comparisons exist, add visualization placeholders: [CHART: description] or [GRAPH: description]
+- Where processes or architectures are discussed, add: [DIAGRAM: description]
+- Suggest relevant images: [IMAGE: description of recommended image]
 - Simple content: Accessible to general audience
 - Technical content: Deep analysis for experts
-- Use HTML tags for formatting
+- Use HTML tags for formatting including <blockquote> for key quotes
 - Return ONLY valid JSON, no markdown code blocks or extra text`,
 
     "research-model": `You are an AI expert researcher. Based on the research provided about an AI model, extract and return comprehensive information as a JSON object:
@@ -123,6 +151,16 @@ Guidelines:
   };
   
   return prompts[action];
+}
+
+interface ArticleOptions {
+  tone: string;
+  length: string;
+  includeDataViz: boolean;
+  includeSources: boolean;
+  includeQuotes: boolean;
+  targetKeywords?: string;
+  creativityLevel: number;
 }
 
 // Use Jina Reader API to scrape web content as markdown
@@ -562,12 +600,26 @@ serve(async (req) => {
     }
 
     let inputContent = content;
+    let articleOptions: ArticleOptions | undefined;
+    
+    // Parse options for article actions
+    if (action === "write-article" || action === "deep-research") {
+      try {
+        const parsed = JSON.parse(content);
+        if (parsed.topic && parsed.options) {
+          inputContent = parsed.topic;
+          articleOptions = parsed.options;
+        }
+      } catch {
+        // Content is plain text topic
+      }
+    }
     
     // For deep-research, gather web content
     if (action === "deep-research") {
-      console.log("Starting deep research for:", content);
-      const researchData = await deepResearch(content);
-      inputContent = `RESEARCH TOPIC: ${content}\n\n--- GATHERED RESEARCH DATA ---\n\n${researchData}\n\n--- END OF RESEARCH DATA ---\n\nBased on the above research, write a comprehensive, well-sourced article about: ${content}`;
+      console.log("Starting deep research for:", inputContent);
+      const researchData = await deepResearch(inputContent);
+      inputContent = `RESEARCH TOPIC: ${inputContent}\n\n--- GATHERED RESEARCH DATA ---\n\n${researchData}\n\n--- END OF RESEARCH DATA ---\n\nBased on the above research, write a comprehensive, well-sourced article about: ${inputContent}`;
     }
     
     // For research-model, gather model-specific information
@@ -577,7 +629,7 @@ serve(async (req) => {
       inputContent = `AI MODEL TO RESEARCH: ${content}\n\n--- GATHERED RESEARCH DATA ---\n\n${researchData}\n\n--- END OF RESEARCH DATA ---\n\nBased on the above research, extract comprehensive information about the AI model: ${content}`;
     }
 
-    const systemPrompt = getSystemPrompt(action as AssistAction);
+    const systemPrompt = getSystemPrompt(action as AssistAction, articleOptions);
 
     console.log("Calling AI gateway with action:", action);
     
