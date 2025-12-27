@@ -77,18 +77,42 @@ export default function LiveStreamEditor() {
         if (error) throw error;
         toast({ title: "Stream updated successfully" });
       } else {
-        const { error } = await supabase
+        const { data: newStream, error } = await supabase
           .from("live_streams")
-          .insert([payload]);
+          .insert([payload])
+          .select()
+          .single();
         if (error) throw error;
-        toast({ title: "Stream scheduled successfully" });
+
+        // Send notification for new scheduled stream
+        if (newStream) {
+          try {
+            await supabase.functions.invoke("send-stream-notification", {
+              body: {
+                streamId: newStream.id,
+                streamTitle: newStream.title,
+                streamDescription: newStream.description,
+                scheduledAt: newStream.scheduled_at,
+                notificationType: "scheduled",
+              },
+            });
+            toast({ 
+              title: "Stream scheduled successfully",
+              description: "Subscribers have been notified via email"
+            });
+          } catch (notifyError) {
+            console.error("Failed to send notification:", notifyError);
+            toast({ title: "Stream scheduled successfully" });
+          }
+        }
       }
       queryClient.invalidateQueries({ queryKey: ["admin-streams"] });
       navigate("/admin/streams");
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
       toast({
         title: "Error",
-        description: error.message,
+        description: message,
         variant: "destructive",
       });
     } finally {
