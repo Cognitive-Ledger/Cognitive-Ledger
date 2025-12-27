@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, X, Search, LogOut, User, Settings, ChevronDown, Radio, Mic } from "lucide-react";
 import { SearchDialog } from "./SearchDialog";
-import { SubscriptionModal } from "@/components/subscription/SubscriptionModal";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useHasEditorialAccess } from "@/hooks/useUserRole";
@@ -31,7 +30,6 @@ const navigation = [
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { hasAccess: hasEditorialAccess } = useHasEditorialAccess();
   const navigate = useNavigate();
@@ -59,7 +57,7 @@ export function Header() {
               variant="ghost" 
               size="sm" 
               className="text-xs font-medium"
-              onClick={() => setSubscriptionOpen(true)}
+              onClick={() => navigate("/subscribe")}
             >
               Subscribe
             </Button>
@@ -198,7 +196,6 @@ export function Header() {
       </nav>
       
       <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
-      <SubscriptionModal open={subscriptionOpen} onOpenChange={setSubscriptionOpen} />
     </header>
   );
 }

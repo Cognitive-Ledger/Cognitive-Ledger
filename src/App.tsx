@@ -13,6 +13,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Podcasts from "./pages/Podcasts";
 import LiveStreams from "./pages/LiveStreams";
+import Subscribe from "./pages/Subscribe";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ArticlesList from "./pages/admin/ArticlesList";
 import ArticleEditor from "./pages/admin/ArticleEditor";
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/podcasts" element={<Podcasts />} />
               <Route path="/live" element={<LiveStreams />} />
+              <Route path="/subscribe" element={<Subscribe />} />
               <Route path="/breaking" element={<CategoryPage />} />
               <Route path="/research" element={<CategoryPage />} />
               <Route path="/companies" element={<CategoryPage />} />
