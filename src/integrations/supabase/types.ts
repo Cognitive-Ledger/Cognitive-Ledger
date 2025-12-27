@@ -185,6 +185,93 @@ export type Database = {
         }
         Relationships: []
       }
+      live_streams: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          is_live: boolean | null
+          is_premium: boolean | null
+          scheduled_at: string
+          stream_url: string | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          viewers_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          is_live?: boolean | null
+          is_premium?: boolean | null
+          scheduled_at: string
+          stream_url?: string | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          viewers_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          is_live?: boolean | null
+          is_premium?: boolean | null
+          scheduled_at?: string
+          stream_url?: string | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          viewers_count?: number | null
+        }
+        Relationships: []
+      }
+      podcasts: {
+        Row: {
+          audio_url: string
+          created_at: string
+          description: string
+          duration_seconds: number
+          episode_number: number | null
+          id: string
+          image_url: string | null
+          is_premium: boolean | null
+          published_at: string
+          season_number: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          audio_url: string
+          created_at?: string
+          description: string
+          duration_seconds?: number
+          episode_number?: number | null
+          id?: string
+          image_url?: string | null
+          is_premium?: boolean | null
+          published_at?: string
+          season_number?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          audio_url?: string
+          created_at?: string
+          description?: string
+          duration_seconds?: number
+          episode_number?: number | null
+          id?: string
+          image_url?: string | null
+          is_premium?: boolean | null
+          published_at?: string
+          season_number?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

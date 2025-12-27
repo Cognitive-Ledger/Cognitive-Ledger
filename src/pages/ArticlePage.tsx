@@ -5,6 +5,7 @@ import { AIImpactPanel } from "@/components/articles/AIImpactPanel";
 import { ReadingModeToggle } from "@/components/articles/ReadingModeToggle";
 import { ArticleCard } from "@/components/articles/ArticleCard";
 import { EmbedRenderer, SingleEmbed, parseContentWithEmbeds, getUnplacedEmbeds, type Embed } from "@/components/articles/EmbedRenderer";
+import { parseVisualPlaceholders, VisualContentRenderer } from "@/components/articles/VisualContentRenderer";
 import { useArticle, useArticles } from "@/hooks/useArticles";
 import { VideoPlayer } from "@/components/video/VideoPlayer";
 import { Clock, ArrowLeft, Share2, Bookmark } from "lucide-react";
@@ -12,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet-async";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Component to render article content with inline embeds
+// Component to render article content with inline embeds and visual content
 function ArticleContent({ content, embeds }: { content: string; embeds: Embed[] }) {
   const parts = parseContentWithEmbeds(content, embeds);
   
@@ -23,13 +24,31 @@ function ArticleContent({ content, embeds }: { content: string; embeds: Embed[] 
           return <SingleEmbed key={`embed-${partIndex}`} embed={part.embed} />;
         }
         
-        // Render HTML content from rich text editor
+        // Parse visual placeholders in text content
+        const visualParts = parseVisualPlaceholders(part.content);
+        
         return (
-          <div 
-            key={`text-${partIndex}`}
-            className="article-content"
-            dangerouslySetInnerHTML={{ __html: part.content }} 
-          />
+          <div key={`text-${partIndex}`}>
+            {visualParts.map((vPart, vIndex) => {
+              if (vPart.type === "visual") {
+                return (
+                  <VisualContentRenderer
+                    key={`visual-${partIndex}-${vIndex}`}
+                    type={vPart.visualType}
+                    description={vPart.description}
+                  />
+                );
+              }
+              // Render HTML content from rich text editor
+              return (
+                <div 
+                  key={`text-${partIndex}-${vIndex}`}
+                  className="article-content"
+                  dangerouslySetInnerHTML={{ __html: vPart.content }} 
+                />
+              );
+            })}
+          </div>
         );
       })}
     </>

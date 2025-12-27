@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, X, Search, LogOut, User, Settings, ChevronDown } from "lucide-react";
+import { Menu, X, Search, LogOut, User, Settings, ChevronDown, Radio, Mic } from "lucide-react";
 import { SearchDialog } from "./SearchDialog";
 import { SubscriptionModal } from "@/components/subscription/SubscriptionModal";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,8 @@ const navigation = [
   { name: "Opinion", href: "/opinion" },
   { name: "Explainers", href: "/explainers" },
   { name: "AI Index", href: "/ai-index" },
+  { name: "Podcasts", href: "/podcasts", icon: Mic },
+  { name: "Live", href: "/live", icon: Radio, highlight: true },
 ];
 
 export function Header() {
@@ -141,8 +143,13 @@ export function Header() {
               <Link
                 key={item.name}
                 to={item.href}
-                className="px-3 py-1.5 text-sm font-medium text-body-text hover:text-primary transition-colors"
+                className={`px-3 py-1.5 text-sm font-medium transition-colors flex items-center gap-1 ${
+                  item.highlight 
+                    ? 'text-destructive hover:text-destructive/80' 
+                    : 'text-body-text hover:text-primary'
+                }`}
               >
+                {item.icon && <item.icon className="h-3.5 w-3.5" />}
                 {item.name}
               </Link>
             ))}
