@@ -227,6 +227,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          id: string
+          live_streams: boolean
+          new_articles: boolean
+          newsletters: boolean
+          product_updates: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          live_streams?: boolean
+          new_articles?: boolean
+          newsletters?: boolean
+          product_updates?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          live_streams?: boolean
+          new_articles?: boolean
+          newsletters?: boolean
+          product_updates?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       podcasts: {
         Row: {
           audio_url: string
