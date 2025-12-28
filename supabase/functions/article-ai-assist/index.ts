@@ -163,32 +163,107 @@ interface ArticleOptions {
   creativityLevel: number;
 }
 
-// Use Jina Reader API to scrape web content as markdown
-async function scrapeWithJina(url: string): Promise<string> {
+interface ScrapedContent {
+  markdown: string;
+  images: string[];
+}
+
+// Use Jina Reader API to scrape web content as markdown and extract images
+async function scrapeWithJina(url: string): Promise<ScrapedContent> {
   console.log("Scraping URL with Jina Reader:", url);
   
   try {
+    // First get markdown content
     const response = await fetch(`https://r.jina.ai/${url}`, {
       method: "GET",
       headers: {
         "Accept": "text/markdown",
         "X-Return-Format": "markdown",
         "X-No-Cache": "true",
+        "X-With-Images-Summary": "true",
       },
     });
 
     if (!response.ok) {
       console.log("Jina Reader error:", response.status);
-      return "";
+      return { markdown: "", images: [] };
     }
 
     const markdown = await response.text();
+    
+    // Extract image URLs from the markdown content
+    const images: string[] = [];
+    
+    // Match markdown image syntax: ![alt](url)
+    const markdownImageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    let match;
+    while ((match = markdownImageRegex.exec(markdown)) !== null) {
+      const imageUrl = match[2];
+      if (imageUrl && isValidImageUrl(imageUrl)) {
+        images.push(imageUrl);
+      }
+    }
+    
+    // Match HTML img tags: <img src="url">
+    const htmlImageRegex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
+    while ((match = htmlImageRegex.exec(markdown)) !== null) {
+      const imageUrl = match[1];
+      if (imageUrl && isValidImageUrl(imageUrl) && !images.includes(imageUrl)) {
+        images.push(imageUrl);
+      }
+    }
+    
+    console.log(`Found ${images.length} images from ${url}`);
+    
     // Limit content to prevent token overflow
-    return markdown.substring(0, 15000);
+    return { 
+      markdown: markdown.substring(0, 15000),
+      images: images.slice(0, 10) // Limit to 10 images per source
+    };
   } catch (error) {
     console.log("Jina Reader fetch error:", error);
-    return "";
+    return { markdown: "", images: [] };
   }
+}
+
+// Validate image URL
+function isValidImageUrl(url: string): boolean {
+  if (!url || url.length < 10) return false;
+  
+  // Must start with http/https
+  if (!url.startsWith("http://") && !url.startsWith("https://")) return false;
+  
+  // Skip tiny icons, tracking pixels, and common non-content images
+  const skipPatterns = [
+    "favicon", "icon", "logo", "avatar",
+    "tracking", "pixel", "beacon",
+    "badge", "button", "banner-ad",
+    "ads", "advert", "sponsor",
+    "1x1", "2x2", "transparent.gif",
+    "spacer", "blank"
+  ];
+  
+  const lowerUrl = url.toLowerCase();
+  for (const pattern of skipPatterns) {
+    if (lowerUrl.includes(pattern)) return false;
+  }
+  
+  // Check for common image extensions or image CDN patterns
+  const imagePatterns = [
+    ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg",
+    "/image/", "/images/", "/img/", "/photos/",
+    "cloudinary.com", "imgix.net", "unsplash.com",
+    "imgur.com", "wp-content/uploads"
+  ];
+  
+  for (const pattern of imagePatterns) {
+    if (lowerUrl.includes(pattern)) return true;
+  }
+  
+  // If URL has typical image dimensions or content patterns
+  if (/\d{3,4}x\d{3,4}/.test(url)) return true;
+  
+  return false;
 }
 
 // Search using DuckDuckGo HTML for real web search results
@@ -467,10 +542,16 @@ async function searchWeb(query: string): Promise<string[]> {
   return uniqueUrls.slice(0, 15); // Get up to 15 diverse sources
 }
 
-async function deepResearch(query: string): Promise<string> {
+interface ResearchResult {
+  content: string;
+  images: string[];
+}
+
+async function deepResearch(query: string): Promise<ResearchResult> {
   console.log("Starting deep research for:", query);
   
   let researchContent = `# Research Results for: "${query}"\n\n`;
+  const allImages: string[] = [];
   
   // Step 1: Search the web using multiple engines
   const urls = await searchWeb(query);
@@ -496,21 +577,30 @@ async function deepResearch(query: string): Promise<string> {
   
   if (urls.length === 0) {
     researchContent += "Note: No specific web sources found. Article will be generated based on general knowledge.\n";
-    return researchContent;
+    return { content: researchContent, images: [] };
   }
 
-  // Step 2: Scrape each URL using Jina Reader for real content
+  // Step 2: Scrape each URL using Jina Reader for real content and images
   let successfulScrapes = 0;
   for (const url of urls.slice(0, 15)) { // Limit to 15 URLs
     console.log("Scraping URL:", url);
     
     try {
-      const content = await scrapeWithJina(url);
+      const scraped = await scrapeWithJina(url);
       
-      if (content && content.length > 200) {
+      if (scraped.markdown && scraped.markdown.length > 200) {
         researchContent += `\n---\n## Source: ${url}\n\n`;
         // Truncate each source to manage token limits
-        researchContent += content.substring(0, 5000) + "\n";
+        researchContent += scraped.markdown.substring(0, 5000) + "\n";
+        
+        // Collect images with source attribution
+        for (const img of scraped.images) {
+          if (!allImages.includes(img)) {
+            allImages.push(img);
+            researchContent += `\n[EXTRACTED_IMAGE: ${img} from ${url}]\n`;
+          }
+        }
+        
         successfulScrapes++;
         
         // Stop if we have enough content
@@ -521,14 +611,15 @@ async function deepResearch(query: string): Promise<string> {
     }
   }
 
-  console.log("Research complete. Successful scrapes:", successfulScrapes, "Content length:", researchContent.length);
-  return researchContent;
+  console.log("Research complete. Successful scrapes:", successfulScrapes, "Images found:", allImages.length, "Content length:", researchContent.length);
+  return { content: researchContent, images: allImages };
 }
 
-async function researchModel(modelQuery: string): Promise<string> {
+async function researchModel(modelQuery: string): Promise<ResearchResult> {
   console.log("Starting model research for:", modelQuery);
   
   let researchContent = `# AI Model Research: "${modelQuery}"\n\n`;
+  const allImages: string[] = [];
   
   // Search for model-specific information
   const searchQueries = [
@@ -554,18 +645,27 @@ async function researchModel(modelQuery: string): Promise<string> {
   
   if (allUrls.length === 0) {
     researchContent += "Note: Limited sources found. Model information will be based on general knowledge.\n";
-    return researchContent;
+    return { content: researchContent, images: [] };
   }
 
   // Scrape each URL
   let successfulScrapes = 0;
   for (const url of allUrls.slice(0, 10)) {
     try {
-      const content = await scrapeWithJina(url);
+      const scraped = await scrapeWithJina(url);
       
-      if (content && content.length > 200) {
+      if (scraped.markdown && scraped.markdown.length > 200) {
         researchContent += `\n---\n## Source: ${url}\n\n`;
-        researchContent += content.substring(0, 4000) + "\n";
+        researchContent += scraped.markdown.substring(0, 4000) + "\n";
+        
+        // Collect images
+        for (const img of scraped.images) {
+          if (!allImages.includes(img)) {
+            allImages.push(img);
+            researchContent += `\n[EXTRACTED_IMAGE: ${img} from ${url}]\n`;
+          }
+        }
+        
         successfulScrapes++;
         
         if (successfulScrapes >= 6) break;
@@ -575,8 +675,8 @@ async function researchModel(modelQuery: string): Promise<string> {
     }
   }
 
-  console.log("Model research complete. Scrapes:", successfulScrapes);
-  return researchContent;
+  console.log("Model research complete. Scrapes:", successfulScrapes, "Images:", allImages.length);
+  return { content: researchContent, images: allImages };
 }
 
 serve(async (req) => {
@@ -615,18 +715,22 @@ serve(async (req) => {
       }
     }
     
-    // For deep-research, gather web content
+    let extractedImages: string[] = [];
+    
+    // For deep-research, gather web content and images
     if (action === "deep-research") {
       console.log("Starting deep research for:", inputContent);
-      const researchData = await deepResearch(inputContent);
-      inputContent = `RESEARCH TOPIC: ${inputContent}\n\n--- GATHERED RESEARCH DATA ---\n\n${researchData}\n\n--- END OF RESEARCH DATA ---\n\nBased on the above research, write a comprehensive, well-sourced article about: ${inputContent}`;
+      const researchResult = await deepResearch(inputContent);
+      extractedImages = researchResult.images;
+      inputContent = `RESEARCH TOPIC: ${inputContent}\n\n--- GATHERED RESEARCH DATA ---\n\n${researchResult.content}\n\n--- END OF RESEARCH DATA ---\n\nBased on the above research, write a comprehensive, well-sourced article about: ${inputContent}\n\nIMPORTANT: The research includes [EXTRACTED_IMAGE: url] markers. When you find relevant images from the sources, include them in your article using: <img src="IMAGE_URL" alt="description" /> tags. Choose the most relevant charts, graphs, diagrams, or photos that enhance the article content.`;
     }
     
     // For research-model, gather model-specific information
     if (action === "research-model") {
       console.log("Starting model research for:", content);
-      const researchData = await researchModel(content);
-      inputContent = `AI MODEL TO RESEARCH: ${content}\n\n--- GATHERED RESEARCH DATA ---\n\n${researchData}\n\n--- END OF RESEARCH DATA ---\n\nBased on the above research, extract comprehensive information about the AI model: ${content}`;
+      const researchResult = await researchModel(content);
+      extractedImages = researchResult.images;
+      inputContent = `AI MODEL TO RESEARCH: ${content}\n\n--- GATHERED RESEARCH DATA ---\n\n${researchResult.content}\n\n--- END OF RESEARCH DATA ---\n\nBased on the above research, extract comprehensive information about the AI model: ${content}`;
     }
 
     const systemPrompt = getSystemPrompt(action as AssistAction, articleOptions);
@@ -692,7 +796,8 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             result,
-            structured
+            structured,
+            extractedImages: extractedImages.length > 0 ? extractedImages : undefined
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
