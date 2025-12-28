@@ -119,7 +119,7 @@ export default function Subscribe() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("creem-checkout", {
+      const { data, error } = await supabase.functions.invoke("autumn-checkout", {
         body: {
           planId,
           isAnnual,
@@ -425,7 +425,7 @@ export default function Subscribe() {
 
           {/* Footer */}
           <div className="text-center mt-12 text-sm text-muted-foreground">
-            <p>Cancel anytime • 7-day free trial on all plans • Secure payment powered by Creem</p>
+            <p>Cancel anytime • 7-day free trial on all plans • Secure payment powered by Autumn</p>
           </div>
         </div>
       </Layout>
