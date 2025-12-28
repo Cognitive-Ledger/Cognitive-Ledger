@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.send-stream-notification]
 verify_jwt = false
+
+[functions.autumn-checkout]
+verify_jwt = false
