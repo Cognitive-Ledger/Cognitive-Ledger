@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.autumn-checkout]
 verify_jwt = false
+
+[functions.autumn-webhook]
+verify_jwt = false

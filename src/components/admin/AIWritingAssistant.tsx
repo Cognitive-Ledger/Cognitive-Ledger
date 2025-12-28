@@ -38,17 +38,25 @@ interface StructuredArticle {
   technical_content: string;
 }
 
+interface ExtractedImage {
+  url: string;
+  source?: string;
+  selected?: boolean;
+}
+
 interface AIWritingAssistantProps {
   currentContent: string;
   onInsertContent: (content: string) => void;
   onInsertStructuredArticle?: (article: StructuredArticle) => void;
+  onSelectImage?: (imageUrl: string) => void;
 }
 
-export function AIWritingAssistant({ currentContent, onInsertContent, onInsertStructuredArticle }: AIWritingAssistantProps) {
+export function AIWritingAssistant({ currentContent, onInsertContent, onInsertStructuredArticle, onSelectImage }: AIWritingAssistantProps) {
   const [action, setAction] = useState<AssistAction>("write-article");
   const [prompt, setPrompt] = useState("");
   const [result, setResult] = useState("");
   const [structuredResult, setStructuredResult] = useState<StructuredArticle | null>(null);
+  const [extractedImages, setExtractedImages] = useState<ExtractedImage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
@@ -139,6 +147,7 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
     setIsLoading(true);
     setResult("");
     setStructuredResult(null);
+    setExtractedImages([]);
 
     try {
       // Build enhanced prompt for write-article with options
@@ -174,6 +183,14 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
       // Check for structured article data
       if (response.data.structured) {
         setStructuredResult(response.data.structured);
+      }
+      
+      // Check for extracted images from deep research
+      if (response.data.images && Array.isArray(response.data.images)) {
+        setExtractedImages(response.data.images.map((url: string) => ({ 
+          url, 
+          selected: false 
+        })));
       }
       
       toast({
@@ -449,6 +466,56 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
         {action === "deep-research" && (
           <div className="text-xs text-muted-foreground text-center space-y-1">
             <p>🌐 Searches multiple engines • 📊 Generates charts & diagrams • 🖼️ Suggests images</p>
+          </div>
+        )}
+
+        {/* Extracted Images from Deep Research */}
+        {extractedImages.length > 0 && (
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Image className="h-4 w-4" />
+                Source Images ({extractedImages.length})
+              </Label>
+              <span className="text-xs text-muted-foreground">Click to select as featured image</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto">
+              {extractedImages.map((img, index) => (
+                <div 
+                  key={index}
+                  className={`relative cursor-pointer rounded-lg border-2 overflow-hidden transition-all hover:border-primary ${
+                    img.selected ? 'border-primary ring-2 ring-primary/20' : 'border-border'
+                  }`}
+                  onClick={() => {
+                    if (onSelectImage) {
+                      onSelectImage(img.url);
+                      setExtractedImages(prev => prev.map((i, idx) => ({
+                        ...i,
+                        selected: idx === index
+                      })));
+                      toast({
+                        title: "Image selected",
+                        description: "Image set as featured image",
+                      });
+                    }
+                  }}
+                >
+                  <img 
+                    src={img.url} 
+                    alt={`Source ${index + 1}`}
+                    className="w-full h-20 object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                  {img.selected && (
+                    <div className="absolute top-1 right-1 bg-primary text-primary-foreground rounded-full p-0.5">
+                      <Check className="h-3 w-3" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
