@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { SubscriptionStatus } from "@/components/subscription/SubscriptionStatus";
 
 interface Plan {
   id: string;
@@ -330,6 +331,17 @@ export default function Subscribe() {
               </Card>
             ))}
           </div>
+
+          {/* Subscription Status */}
+          {user && (
+            <>
+              <Separator className="mb-12" />
+              
+              <section className="max-w-2xl mx-auto mb-12">
+                <SubscriptionStatus />
+              </section>
+            </>
+          )}
 
           {/* Notification Preferences */}
           {user && (
