@@ -437,6 +437,7 @@ export default function ArticleEditor() {
                   currentContent={form.content}
                   onInsertContent={handleAIInsert}
                   onInsertStructuredArticle={handleAIInsertStructured}
+                  onSelectImage={(url) => setForm((prev) => ({ ...prev, image_url: url }))}
                 />
 
                 <Card>
