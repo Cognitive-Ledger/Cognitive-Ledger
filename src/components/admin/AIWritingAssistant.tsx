@@ -170,13 +170,34 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
         });
       }
 
-      const response = await supabase.functions.invoke("article-ai-assist", {
-        body: { action, content: enhancedContent },
+      // Use direct fetch with longer timeout for deep research
+      const timeoutMs = action === "deep-research" ? 180000 : 120000; // 3 min for research, 2 min otherwise
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      
+      const { data: sessionData } = await supabase.auth.getSession();
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const projectUrl = import.meta.env.VITE_SUPABASE_URL;
+      
+      const fetchResponse = await fetch(`${projectUrl}/functions/v1/article-ai-assist`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionData?.session?.access_token || anonKey}`,
+          'apikey': anonKey,
+        },
+        body: JSON.stringify({ action, content: enhancedContent }),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
-      if (response.error) {
-        throw new Error(response.error.message);
+      if (!fetchResponse.ok) {
+        const errorData = await fetchResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || `Request failed with status ${fetchResponse.status}`);
       }
+      
+      const response = { data: await fetchResponse.json() };
 
       setResult(response.data.result);
       
