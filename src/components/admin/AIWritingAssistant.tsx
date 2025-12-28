@@ -186,8 +186,9 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
       }
       
       // Check for extracted images from deep research
-      if (response.data.images && Array.isArray(response.data.images)) {
-        setExtractedImages(response.data.images.map((url: string) => ({ 
+      const images = response.data.extractedImages || response.data.images;
+      if (images && Array.isArray(images)) {
+        setExtractedImages(images.map((url: string) => ({ 
           url, 
           selected: false 
         })));
@@ -567,9 +568,16 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
               </div>
             ) : (
               <div className="bg-muted rounded-lg p-4 max-h-[400px] overflow-y-auto">
-                <pre className="whitespace-pre-wrap text-sm font-sans">
-                  {result}
-                </pre>
+                <div 
+                  className="prose prose-sm dark:prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ 
+                    __html: result
+                      .replace(/^```[a-z]*\n?/gm, '')
+                      .replace(/```$/gm, '')
+                      .replace(/\n/g, '<br/>')
+                      .replace(/#{1,3}\s+(.+)/g, '<strong>$1</strong><br/>')
+                  }}
+                />
                 <Button size="sm" className="mt-3" onClick={handleInsert}>
                   Insert into Editor
                 </Button>
