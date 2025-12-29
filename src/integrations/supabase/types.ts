@@ -192,7 +192,9 @@ export type Database = {
           id: string
           is_live: boolean | null
           is_premium: boolean | null
+          playback_url: string | null
           scheduled_at: string
+          stream_key: string | null
           stream_url: string | null
           thumbnail_url: string | null
           title: string
@@ -205,7 +207,9 @@ export type Database = {
           id?: string
           is_live?: boolean | null
           is_premium?: boolean | null
+          playback_url?: string | null
           scheduled_at: string
+          stream_key?: string | null
           stream_url?: string | null
           thumbnail_url?: string | null
           title: string
@@ -218,7 +222,9 @@ export type Database = {
           id?: string
           is_live?: boolean | null
           is_premium?: boolean | null
+          playback_url?: string | null
           scheduled_at?: string
+          stream_key?: string | null
           stream_url?: string | null
           thumbnail_url?: string | null
           title?: string

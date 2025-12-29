@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { ImageUploader } from "@/components/admin/ImageUploader";
+import { AudioUploader } from "@/components/admin/AudioUploader";
 
 export default function PodcastEditor() {
   const { id } = useParams();
@@ -162,28 +164,18 @@ export default function PodcastEditor() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="audio_url">Audio URL</Label>
-              <Input
-                id="audio_url"
-                type="url"
-                value={formData.audio_url}
-                onChange={(e) => setFormData({ ...formData, audio_url: e.target.value })}
-                placeholder="https://example.com/podcast.mp3"
-                required
-              />
-            </div>
+            <AudioUploader
+              value={formData.audio_url}
+              onChange={(url) => setFormData({ ...formData, audio_url: url })}
+              label="Upload Audio"
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="image_url">Cover Image URL</Label>
-              <Input
-                id="image_url"
-                type="url"
-                value={formData.image_url}
-                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                placeholder="https://example.com/cover.jpg"
-              />
-            </div>
+            <ImageUploader
+              value={formData.image_url}
+              onChange={(url) => setFormData({ ...formData, image_url: url })}
+              label="Upload Cover Image"
+              bucket="podcast-covers"
+            />
 
             <div className="space-y-2">
               <Label htmlFor="duration">Duration (seconds)</Label>
