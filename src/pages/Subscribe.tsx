@@ -104,47 +104,18 @@ export default function Subscribe() {
     enabled: !!user?.id,
   });
 
-  const handleSubscribe = async (planId: string) => {
-    const plan = plans.find(p => p.id === planId);
-    if (!plan) return;
-
+  const handleSubscribe = (planId: string) => {
     if (!user) {
       toast({
         title: "Sign in required",
         description: "Please sign in to subscribe",
       });
-      navigate("/auth");
+      navigate("/auth?redirect=/subscribe");
       return;
     }
 
-    setIsLoading(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke("autumn-checkout", {
-        body: {
-          planId,
-          isAnnual,
-          email: user?.email || "",
-          userId: user?.id || "",
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
-      } else {
-        throw new Error("No checkout URL received");
-      }
-    } catch (error: unknown) {
-      console.error("Checkout error:", error);
-      toast({
-        title: "Payment Coming Soon",
-        description: `${plan.name} subscription will be available soon. We'll notify you when it launches!`,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // Navigate to custom checkout page
+    navigate(`/checkout?plan=${planId}&billing=${isAnnual ? "annual" : "monthly"}`);
   };
 
   const updatePreference = async (key: string, value: boolean) => {
@@ -437,7 +408,7 @@ export default function Subscribe() {
 
           {/* Footer */}
           <div className="text-center mt-12 text-sm text-muted-foreground">
-            <p>Cancel anytime • 7-day free trial on all plans • Secure payment powered by Autumn</p>
+            <p>Cancel anytime • 7-day free trial on all plans • Secure payment</p>
           </div>
         </div>
       </Layout>
