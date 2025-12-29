@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -16,11 +17,9 @@ import {
   Mail, 
   Zap, 
   Crown,
-  Sparkles,
-  Loader2
+  Sparkles
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
 interface SubscriptionModalProps {
@@ -82,43 +81,23 @@ const plans: Plan[] = [
 export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps) {
   const [selectedPlan, setSelectedPlan] = useState<string>("professional");
   const [isAnnual, setIsAnnual] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubscribe = async (planId: string) => {
-    const plan = plans.find(p => p.id === planId);
-    if (!plan) return;
-
-    setIsLoading(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke("creem-checkout", {
-        body: {
-          planId,
-          isAnnual,
-          email: user?.email || "",
-          userId: user?.id || "",
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
-      } else {
-        throw new Error("No checkout URL received");
-      }
-    } catch (error: unknown) {
-      console.error("Checkout error:", error);
+  const handleSubscribe = (planId: string) => {
+    if (!user) {
       toast({
-        title: "Payment Coming Soon",
-        description: `${plan.name} subscription will be available soon. We'll notify you when it launches!`,
+        title: "Sign in required",
+        description: "Please sign in to subscribe",
       });
       onOpenChange(false);
-    } finally {
-      setIsLoading(false);
+      navigate("/auth?redirect=/subscribe");
+      return;
     }
+
+    onOpenChange(false);
+    navigate(`/checkout?plan=${planId}&billing=${isAnnual ? "annual" : "monthly"}`)
   };
 
   const formatPrice = (plan: Plan) => {
@@ -259,11 +238,7 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
                   }}
                   variant={plan.highlighted ? "default" : "outline"}
                   className="w-full"
-                  disabled={isLoading}
                 >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : null}
                   {plan.highlighted ? "Get Started" : "Choose Plan"}
                 </Button>
               </div>
@@ -273,7 +248,7 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
 
         <div className="px-6 py-4 border-t bg-muted/30 text-center text-sm text-muted-foreground">
           <p>
-            Cancel anytime • 7-day free trial on all plans • Secure payment powered by Creem
+            Cancel anytime • 7-day free trial on all plans • Secure payment
           </p>
         </div>
       </DialogContent>
