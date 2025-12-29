@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Sparkles, Copy, Check, PenTool, Globe, Wand2, FileText, Zap, BookOpen, BarChart3, Image } from "lucide-react";
+import { Loader2, Sparkles, Copy, Check, PenTool, Globe, Wand2, FileText, Zap, BookOpen, BarChart3, Image, X, Minimize2, Maximize2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -29,6 +29,8 @@ type AssistAction =
 
 type ArticleTone = "professional" | "conversational" | "academic" | "engaging";
 type ArticleLength = "short" | "medium" | "long" | "comprehensive";
+
+type ResearchStage = "idle" | "searching" | "scraping" | "analyzing" | "generating" | "complete";
 
 interface StructuredArticle {
   title: string;
@@ -51,6 +53,64 @@ interface AIWritingAssistantProps {
   onSelectImage?: (imageUrl: string) => void;
 }
 
+// Progress indicator component
+function ResearchProgress({ stage, isMinimized }: { stage: ResearchStage; isMinimized: boolean }) {
+  const stages: { key: ResearchStage; label: string; icon: React.ReactNode }[] = [
+    { key: "searching", label: "Searching web", icon: <Globe className="h-4 w-4" /> },
+    { key: "scraping", label: "Reading sources", icon: <FileText className="h-4 w-4" /> },
+    { key: "analyzing", label: "Analyzing data", icon: <BarChart3 className="h-4 w-4" /> },
+    { key: "generating", label: "Writing article", icon: <PenTool className="h-4 w-4" /> },
+  ];
+
+  const currentIndex = stages.findIndex(s => s.key === stage);
+
+  if (isMinimized) {
+    const currentStage = stages.find(s => s.key === stage);
+    return (
+      <div className="flex items-center gap-2 text-sm">
+        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+        <span>{currentStage?.label || "Processing..."}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 p-4 bg-primary/5 rounded-lg border border-primary/20">
+      <div className="flex items-center gap-2 text-sm font-medium text-primary">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Deep Research in Progress
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {stages.map((s, idx) => {
+          const isActive = s.key === stage;
+          const isComplete = currentIndex > idx;
+          const isPending = currentIndex < idx;
+
+          return (
+            <div
+              key={s.key}
+              className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
+                isActive ? "bg-primary/20 text-primary" :
+                isComplete ? "bg-primary/10 text-primary/80" :
+                "bg-muted/50 text-muted-foreground"
+              }`}
+            >
+              <div className={`p-2 rounded-full ${
+                isActive ? "bg-primary text-primary-foreground animate-pulse" :
+                isComplete ? "bg-primary/50 text-primary-foreground" :
+                "bg-muted"
+              }`}>
+                {isComplete ? <Check className="h-4 w-4" /> : s.icon}
+              </div>
+              <span className="text-xs text-center">{s.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function AIWritingAssistant({ currentContent, onInsertContent, onInsertStructuredArticle, onSelectImage }: AIWritingAssistantProps) {
   const [action, setAction] = useState<AssistAction>("write-article");
   const [prompt, setPrompt] = useState("");
@@ -59,6 +119,13 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
   const [extractedImages, setExtractedImages] = useState<ExtractedImage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [researchStage, setResearchStage] = useState<ResearchStage>("idle");
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [backgroundTask, setBackgroundTask] = useState<{
+    topic: string;
+    action: AssistAction;
+    controller: AbortController;
+  } | null>(null);
   const { toast } = useToast();
 
   // Advanced options for write-article
@@ -114,7 +181,30 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
     },
   };
 
-  const handleGenerate = async () => {
+  // Simulate research stages for deep research
+  useEffect(() => {
+    if (!isLoading || action !== "deep-research") {
+      if (!isLoading) setResearchStage("idle");
+      return;
+    }
+
+    // Simulate stage progression
+    const stages: ResearchStage[] = ["searching", "scraping", "analyzing", "generating"];
+    let currentIdx = 0;
+
+    setResearchStage(stages[0]);
+
+    const interval = setInterval(() => {
+      currentIdx++;
+      if (currentIdx < stages.length) {
+        setResearchStage(stages[currentIdx]);
+      }
+    }, 8000); // Move to next stage every 8 seconds (rough estimate)
+
+    return () => clearInterval(interval);
+  }, [isLoading, action]);
+
+  const handleGenerate = async (runInBackground = false) => {
     // For article writing actions, prompt is required
     if (action === "write-article" || action === "deep-research") {
       if (!prompt.trim()) {
@@ -149,6 +239,21 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
     setStructuredResult(null);
     setExtractedImages([]);
 
+    const controller = new AbortController();
+
+    if (runInBackground) {
+      setBackgroundTask({
+        topic: inputText,
+        action,
+        controller,
+      });
+      setIsMinimized(true);
+      toast({
+        title: "Running in background",
+        description: "You can continue editing. We'll notify you when complete.",
+      });
+    }
+
     try {
       // Build enhanced prompt for write-article with options
       let enhancedContent = inputText;
@@ -172,7 +277,6 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
 
       // Use direct fetch with longer timeout for deep research
       const timeoutMs = action === "deep-research" ? 180000 : 120000; // 3 min for research, 2 min otherwise
-      const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       
       const { data: sessionData } = await supabase.auth.getSession();
@@ -200,6 +304,7 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
       const response = { data: await fetchResponse.json() };
 
       setResult(response.data.result);
+      setResearchStage("complete");
       
       // Check for structured article data
       if (response.data.structured) {
@@ -214,22 +319,55 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
           selected: false 
         })));
       }
-      
-      toast({
-        title: action === "deep-research" ? "Research complete" : "Content generated",
-        description: action === "deep-research" 
-          ? "Article generated with web research and visualizations" 
-          : "AI has generated your content",
-      });
+
+      // If minimized, show completion notification
+      if (isMinimized || runInBackground) {
+        setIsMinimized(false);
+        toast({
+          title: action === "deep-research" ? "Research complete!" : "Content generated!",
+          description: "Click to view your results",
+        });
+      } else {
+        toast({
+          title: action === "deep-research" ? "Research complete" : "Content generated",
+          description: action === "deep-research" 
+            ? "Article generated with web research and visualizations" 
+            : "AI has generated your content",
+        });
+      }
     } catch (error) {
       console.error("AI assist error:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate content",
-        variant: "destructive",
-      });
+      if ((error as Error).name === "AbortError") {
+        toast({
+          title: "Request cancelled",
+          description: "The request was cancelled or timed out",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to generate content",
+          variant: "destructive",
+        });
+      }
+      setResearchStage("idle");
     } finally {
       setIsLoading(false);
+      setBackgroundTask(null);
+    }
+  };
+
+  const handleCancelBackground = () => {
+    if (backgroundTask) {
+      backgroundTask.controller.abort();
+      setBackgroundTask(null);
+      setIsLoading(false);
+      setResearchStage("idle");
+      setIsMinimized(false);
+      toast({
+        title: "Cancelled",
+        description: "Background task was cancelled",
+      });
     }
   };
 
@@ -278,8 +416,8 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
 
   const getButtonLabel = () => {
     if (isLoading) {
-      if (action === "deep-research") return "Researching & generating visuals...";
-      if (action === "write-article") return "Writing article...";
+      if (action === "deep-research") return "Researching...";
+      if (action === "write-article") return "Writing...";
       return "Generating...";
     }
     switch (action) {
@@ -294,21 +432,76 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
 
   const isArticleAction = action === "write-article" || action === "deep-research";
 
+  // Floating minimized indicator when running in background
+  if (isMinimized && isLoading) {
+    return (
+      <Card className="border-primary/20 fixed bottom-4 right-4 z-50 w-80 shadow-lg animate-in slide-in-from-bottom-4">
+        <CardContent className="p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ResearchProgress stage={researchStage} isMinimized={true} />
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setIsMinimized(false)}
+              >
+                <Maximize2 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive"
+                onClick={handleCancelBackground}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1 truncate">
+            Topic: {backgroundTask?.topic}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="border-primary/20">
       <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          AI Writing Assistant
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            AI Writing Assistant
+          </CardTitle>
+          {isLoading && action === "deep-research" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsMinimized(true)}
+              className="text-xs"
+            >
+              <Minimize2 className="h-4 w-4 mr-1" />
+              Minimize
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Progress indicator for deep research */}
+        {isLoading && action === "deep-research" && (
+          <ResearchProgress stage={researchStage} isMinimized={false} />
+        )}
+
         {/* Action selector */}
         <div>
           <Label className="text-xs text-muted-foreground mb-2 block">Select Action</Label>
           <Select
             value={action}
             onValueChange={(value) => setAction(value as AssistAction)}
+            disabled={isLoading}
           >
             <SelectTrigger className="h-11">
               <SelectValue />
@@ -356,11 +549,12 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
             onChange={(e) => setPrompt(e.target.value)}
             rows={isArticleAction ? 5 : 4}
             className={action === "deep-research" ? "border-primary/50 focus:border-primary" : ""}
+            disabled={isLoading}
           />
         </div>
 
         {/* Advanced options for article writing */}
-        {isArticleAction && (
+        {isArticleAction && !isLoading && (
           <div className="space-y-4">
             <button
               type="button"
@@ -466,26 +660,39 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
         )}
 
         {/* Generate button */}
-        <Button 
-          onClick={handleGenerate} 
-          disabled={isLoading}
-          className="w-full h-11"
-          size="lg"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {getButtonLabel()}
-            </>
-          ) : (
-            <>
+        {!isLoading && (
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => handleGenerate(false)} 
+              disabled={isLoading}
+              className="flex-1 h-11"
+              size="lg"
+            >
               {actionLabels[action].icon}
               <span className="ml-2">{getButtonLabel()}</span>
-            </>
-          )}
-        </Button>
+            </Button>
+            {(action === "deep-research" || action === "write-article") && (
+              <Button
+                variant="outline"
+                onClick={() => handleGenerate(true)}
+                disabled={isLoading}
+                className="h-11"
+                title="Run in background while you continue editing"
+              >
+                <Minimize2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        )}
 
-        {action === "deep-research" && (
+        {isLoading && action !== "deep-research" && (
+          <Button disabled className="w-full h-11" size="lg">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            {getButtonLabel()}
+          </Button>
+        )}
+
+        {action === "deep-research" && !isLoading && (
           <div className="text-xs text-muted-foreground text-center space-y-1">
             <p>🌐 Searches multiple engines • 📊 Generates charts & diagrams • 🖼️ Suggests images</p>
           </div>
@@ -573,8 +780,8 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
                 <div className="space-y-1">
                   <p className="text-xs font-semibold text-primary uppercase tracking-wide">Main Content Preview</p>
                   <div 
-                    className="text-sm prose prose-sm dark:prose-invert max-h-48 overflow-y-auto border rounded p-3 bg-background"
-                    dangerouslySetInnerHTML={{ __html: structuredResult.content.substring(0, 800) + "..." }}
+                    className="text-sm prose prose-sm dark:prose-invert max-w-none max-h-48 overflow-y-auto border rounded p-3 bg-background [&_h1]:text-xl [&_h1]:font-bold [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-2 [&_h3]:text-base [&_h3]:font-medium [&_h3]:mt-2 [&_h3]:mb-1 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_blockquote]:border-l-4 [&_blockquote]:border-primary/50 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_strong]:font-semibold [&_em]:italic [&_a]:text-primary [&_a]:underline"
+                    dangerouslySetInnerHTML={{ __html: structuredResult.content }}
                   />
                 </div>
                 
@@ -590,14 +797,8 @@ export function AIWritingAssistant({ currentContent, onInsertContent, onInsertSt
             ) : (
               <div className="bg-muted rounded-lg p-4 max-h-[400px] overflow-y-auto">
                 <div 
-                  className="prose prose-sm dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ 
-                    __html: result
-                      .replace(/^```[a-z]*\n?/gm, '')
-                      .replace(/```$/gm, '')
-                      .replace(/\n/g, '<br/>')
-                      .replace(/#{1,3}\s+(.+)/g, '<strong>$1</strong><br/>')
-                  }}
+                  className="prose prose-sm dark:prose-invert max-w-none [&_h1]:text-xl [&_h1]:font-bold [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-2 [&_h3]:text-base [&_h3]:font-medium [&_h3]:mt-2 [&_h3]:mb-1 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_blockquote]:border-l-4 [&_blockquote]:border-primary/50 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_strong]:font-semibold [&_em]:italic [&_a]:text-primary [&_a]:underline"
+                  dangerouslySetInnerHTML={{ __html: result }}
                 />
                 <Button size="sm" className="mt-3" onClick={handleInsert}>
                   Insert into Editor
