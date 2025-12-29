@@ -13,7 +13,6 @@ import {
   Clock, 
   Users, 
   Bell,
-  Play,
   Lock,
   MessageCircle,
   Send,
@@ -21,6 +20,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { VideoPlayer } from "@/components/video/VideoPlayer";
 
 interface LiveStream {
   id: string;
@@ -32,6 +32,8 @@ interface LiveStream {
   is_live: boolean;
   is_premium: boolean;
   viewers_count: number;
+  playback_url: string | null;
+  stream_key: string | null;
 }
 
 interface ChatMessage {
@@ -96,6 +98,8 @@ export default function LiveStreams() {
       is_live: true,
       is_premium: false,
       viewers_count: 1247,
+      playback_url: null,
+      stream_key: null,
     },
     {
       id: "2",
@@ -107,6 +111,8 @@ export default function LiveStreams() {
       is_live: false,
       is_premium: true,
       viewers_count: 0,
+      playback_url: null,
+      stream_key: null,
     },
     {
       id: "3",
@@ -118,6 +124,8 @@ export default function LiveStreams() {
       is_live: false,
       is_premium: false,
       viewers_count: 0,
+      playback_url: null,
+      stream_key: null,
     },
   ];
 
@@ -136,6 +144,91 @@ export default function LiveStreams() {
       timestamp: new Date(),
     }]);
     setNewMessage("");
+  };
+
+  // Determine video source - prefer playback_url (HLS) over stream_url (YouTube/external)
+  const getVideoSource = (stream: LiveStream) => {
+    if (stream.playback_url) {
+      return stream.playback_url;
+    }
+    if (stream.stream_url) {
+      return stream.stream_url;
+    }
+    return null;
+  };
+
+  const renderStreamPlayer = (stream: LiveStream) => {
+    const videoSource = getVideoSource(stream);
+    
+    // Show video player if stream is live and has a video source
+    if (stream.is_live && videoSource && !stream.is_premium) {
+      return (
+        <VideoPlayer
+          src={videoSource}
+          title={stream.title}
+          poster={stream.thumbnail_url || undefined}
+          className="w-full h-full"
+        />
+      );
+    }
+
+    // Show thumbnail with overlay for non-live or premium streams
+    return (
+      <>
+        <img
+          src={stream.thumbnail_url || "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=1200&h=675&fit=crop"}
+          alt={stream.title}
+          className="w-full h-full object-cover"
+        />
+        {/* Stream Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+        
+        {/* Live Badge */}
+        {stream.is_live && (
+          <div className="absolute top-4 left-4 flex items-center gap-2">
+            <Badge variant="destructive" className="animate-pulse">
+              <Radio className="h-3 w-3 mr-1" />
+              LIVE
+            </Badge>
+            <Badge variant="secondary">
+              <Users className="h-3 w-3 mr-1" />
+              {stream.viewers_count.toLocaleString()} watching
+            </Badge>
+          </div>
+        )}
+
+        {/* Premium Lock */}
+        {stream.is_premium && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+            <div className="text-center text-white">
+              <Lock className="h-12 w-12 mx-auto mb-4" />
+              <p className="text-lg font-semibold mb-2">Premium Content</p>
+              <Button variant="secondary">Subscribe to Watch</Button>
+            </div>
+          </div>
+        )}
+
+        {/* Countdown for non-live */}
+        {!stream.is_live && !stream.is_premium && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center text-white">
+              <Clock className="h-12 w-12 mx-auto mb-4" />
+              <p className="text-lg font-semibold mb-2">{formatScheduledTime(stream.scheduled_at)}</p>
+              <Button variant="outline" className="text-white border-white hover:bg-white/20">
+                <Bell className="h-4 w-4 mr-2" />
+                Set Reminder
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Stream Info */}
+        <div className="absolute bottom-0 left-0 right-0 p-6">
+          <h2 className="text-xl font-bold text-white mb-2">{stream.title}</h2>
+          <p className="text-white/80 text-sm line-clamp-2">{stream.description}</p>
+        </div>
+      </>
+    );
   };
 
   return (
@@ -167,60 +260,7 @@ export default function LiveStreams() {
               <Card className="overflow-hidden">
                 <div className="relative aspect-video bg-black">
                   {currentStream ? (
-                    <>
-                      <img
-                        src={currentStream.thumbnail_url || "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=1200&h=675&fit=crop"}
-                        alt={currentStream.title}
-                        className="w-full h-full object-cover"
-                      />
-                      {/* Stream Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                      
-                      {/* Live Badge */}
-                      {currentStream.is_live && (
-                        <div className="absolute top-4 left-4 flex items-center gap-2">
-                          <Badge variant="destructive" className="animate-pulse">
-                            <Radio className="h-3 w-3 mr-1" />
-                            LIVE
-                          </Badge>
-                          <Badge variant="secondary">
-                            <Users className="h-3 w-3 mr-1" />
-                            {currentStream.viewers_count.toLocaleString()} watching
-                          </Badge>
-                        </div>
-                      )}
-
-                      {/* Premium Lock */}
-                      {currentStream.is_premium && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                          <div className="text-center text-white">
-                            <Lock className="h-12 w-12 mx-auto mb-4" />
-                            <p className="text-lg font-semibold mb-2">Premium Content</p>
-                            <Button variant="secondary">Subscribe to Watch</Button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Play Button for non-live */}
-                      {!currentStream.is_live && !currentStream.is_premium && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="text-center text-white">
-                            <Clock className="h-12 w-12 mx-auto mb-4" />
-                            <p className="text-lg font-semibold mb-2">{formatScheduledTime(currentStream.scheduled_at)}</p>
-                            <Button variant="outline" className="text-white border-white hover:bg-white/20">
-                              <Bell className="h-4 w-4 mr-2" />
-                              Set Reminder
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Stream Info */}
-                      <div className="absolute bottom-0 left-0 right-0 p-6">
-                        <h2 className="text-xl font-bold text-white mb-2">{currentStream.title}</h2>
-                        <p className="text-white/80 text-sm line-clamp-2">{currentStream.description}</p>
-                      </div>
-                    </>
+                    renderStreamPlayer(currentStream)
                   ) : (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center text-white/60">
@@ -230,6 +270,27 @@ export default function LiveStreams() {
                     </div>
                   )}
                 </div>
+                {/* Stream info below player for live streams */}
+                {currentStream?.is_live && getVideoSource(currentStream) && !currentStream.is_premium && (
+                  <CardContent className="p-4 border-t">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant="destructive" className="animate-pulse">
+                            <Radio className="h-3 w-3 mr-1" />
+                            LIVE
+                          </Badge>
+                          <Badge variant="secondary">
+                            <Users className="h-3 w-3 mr-1" />
+                            {currentStream.viewers_count.toLocaleString()} watching
+                          </Badge>
+                        </div>
+                        <h2 className="text-lg font-bold mb-1">{currentStream.title}</h2>
+                        <p className="text-sm text-muted-foreground">{currentStream.description}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                )}
               </Card>
 
               {/* Upcoming Streams */}

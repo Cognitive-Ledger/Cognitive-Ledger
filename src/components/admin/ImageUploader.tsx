@@ -10,9 +10,15 @@ interface ImageUploaderProps {
   value: string;
   onChange: (url: string) => void;
   label?: string;
+  bucket?: 'article-images' | 'podcast-covers' | 'stream-thumbnails';
 }
 
-export function ImageUploader({ value, onChange, label = "Image" }: ImageUploaderProps) {
+export function ImageUploader({ 
+  value, 
+  onChange, 
+  label = "Image",
+  bucket = 'article-images'
+}: ImageUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,19 +48,18 @@ export function ImageUploader({ value, onChange, label = "Image" }: ImageUploade
     try {
       const fileExt = file.name.split(".").pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `articles/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("article-images")
-        .upload(filePath, file);
+        .from(bucket)
+        .upload(fileName, file);
 
       if (uploadError) {
         throw uploadError;
       }
 
       const { data } = supabase.storage
-        .from("article-images")
-        .getPublicUrl(filePath);
+        .from(bucket)
+        .getPublicUrl(fileName);
 
       onChange(data.publicUrl);
       
