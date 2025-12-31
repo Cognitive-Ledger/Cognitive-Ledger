@@ -15,6 +15,12 @@ import Podcasts from "./pages/Podcasts";
 import LiveStreams from "./pages/LiveStreams";
 import Subscribe from "./pages/Subscribe";
 import Checkout from "./pages/Checkout";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import CookiePolicy from "./pages/CookiePolicy";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import EditorialStandards from "./pages/EditorialStandards";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ArticlesList from "./pages/admin/ArticlesList";
 import ArticleEditor from "./pages/admin/ArticleEditor";
@@ -48,6 +54,12 @@ const App = () => (
               <Route path="/live" element={<LiveStreams />} />
               <Route path="/subscribe" element={<Subscribe />} />
               <Route path="/checkout" element={<Checkout />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/cookies" element={<CookiePolicy />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/standards" element={<EditorialStandards />} />
               <Route path="/breaking" element={<CategoryPage />} />
               <Route path="/research" element={<CategoryPage />} />
               <Route path="/companies" element={<CategoryPage />} />

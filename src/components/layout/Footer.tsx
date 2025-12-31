@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { NewsletterSignup } from "@/components/newsletter/NewsletterSignup";
 
 const footerLinks = {
   sections: [
@@ -13,7 +14,6 @@ const footerLinks = {
     { name: "About Us", href: "/about" },
     { name: "Editorial Standards", href: "/standards" },
     { name: "Contact", href: "/contact" },
-    { name: "Careers", href: "/careers" },
   ],
   legal: [
     { name: "Terms of Service", href: "/terms" },
@@ -26,18 +26,23 @@ export function Footer() {
   return (
     <footer className="border-t border-divider bg-secondary/30 mt-16">
       <div className="container py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand */}
-          <div className="md:col-span-1">
+          <div className="lg:col-span-2">
             <Link to="/" className="inline-block">
               <h2 className="font-serif text-xl font-medium text-headline">
                 Cognitive Ledger
               </h2>
             </Link>
-            <p className="mt-3 text-sm text-caption leading-relaxed">
+            <p className="mt-3 text-sm text-caption leading-relaxed max-w-sm">
               Independent journalism covering artificial intelligence research, 
               policy, and industry developments.
             </p>
+            
+            {/* Newsletter in Footer */}
+            <div className="mt-6">
+              <NewsletterSignup variant="footer" />
+            </div>
           </div>
 
           {/* Sections */}
