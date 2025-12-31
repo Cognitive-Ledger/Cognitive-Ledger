@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Download, Search, Trash2, UserPlus, Users, UserCheck, UserX } from "lucide-react";
+import { Download, Search, Trash2, UserPlus, Users, UserCheck, UserX, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -35,6 +36,7 @@ interface Subscriber {
   subscribed_at: string;
   is_active: boolean;
   unsubscribed_at: string | null;
+  confirmed_at: string | null;
 }
 
 export default function NewsletterSubscribers() {
@@ -117,8 +119,9 @@ export default function NewsletterSubscribers() {
     sub.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  const activeCount = subscribers?.filter((s) => s.is_active).length || 0;
-  const inactiveCount = subscribers?.filter((s) => !s.is_active).length || 0;
+  const activeCount = subscribers?.filter((s) => s.is_active && s.confirmed_at).length || 0;
+  const pendingCount = subscribers?.filter((s) => !s.confirmed_at).length || 0;
+  const inactiveCount = subscribers?.filter((s) => !s.is_active && s.confirmed_at).length || 0;
 
   const exportToCSV = () => {
     if (!subscribers?.length) return;
@@ -161,10 +164,18 @@ export default function NewsletterSubscribers() {
               Manage your newsletter subscriber list
             </p>
           </div>
-          <Button onClick={exportToCSV} disabled={!subscribers?.length}>
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild>
+              <Link to="/admin/newsletter/compose">
+                <Send className="w-4 h-4 mr-2" />
+                Compose
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={exportToCSV} disabled={!subscribers?.length}>
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -186,19 +197,19 @@ export default function NewsletterSubscribers() {
                 <UserCheck className="w-5 h-5 text-green-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Active</p>
+                <p className="text-sm text-muted-foreground">Confirmed</p>
                 <p className="text-2xl font-semibold">{activeCount}</p>
               </div>
             </div>
           </div>
           <div className="bg-card border border-border rounded-lg p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-destructive/10 rounded-lg">
-                <UserX className="w-5 h-5 text-destructive" />
+              <div className="p-2 bg-amber-500/10 rounded-lg">
+                <Users className="w-5 h-5 text-amber-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Unsubscribed</p>
-                <p className="text-2xl font-semibold">{inactiveCount}</p>
+                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-2xl font-semibold">{pendingCount}</p>
               </div>
             </div>
           </div>
@@ -265,18 +276,24 @@ export default function NewsletterSubscribers() {
                       {format(new Date(subscriber.subscribed_at), "MMM d, yyyy")}
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={subscriber.is_active ? "default" : "secondary"}
-                        className="cursor-pointer"
-                        onClick={() =>
-                          toggleActive.mutate({
-                            id: subscriber.id,
-                            isActive: !subscriber.is_active,
-                          })
-                        }
-                      >
-                        {subscriber.is_active ? "Active" : "Unsubscribed"}
-                      </Badge>
+                      {!subscriber.confirmed_at ? (
+                        <Badge variant="outline" className="text-amber-600 border-amber-300">
+                          Pending
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant={subscriber.is_active ? "default" : "secondary"}
+                          className="cursor-pointer"
+                          onClick={() =>
+                            toggleActive.mutate({
+                              id: subscriber.id,
+                              isActive: !subscriber.is_active,
+                            })
+                          }
+                        >
+                          {subscriber.is_active ? "Active" : "Unsubscribed"}
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <AlertDialog>

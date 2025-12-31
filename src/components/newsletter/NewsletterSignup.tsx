@@ -35,7 +35,7 @@ export function NewsletterSignup({ variant = "card", className = "" }: Newslette
       if (data?.alreadySubscribed) {
         toast.info("You're already subscribed!");
       } else {
-        toast.success("You're subscribed! Check your inbox for a welcome email.");
+        toast.success("Check your email to confirm your subscription!");
       }
       
       // Reset success state after 3 seconds

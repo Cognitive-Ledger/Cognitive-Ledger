@@ -35,7 +35,9 @@ import PodcastEditor from "./pages/admin/PodcastEditor";
 import LiveStreamsList from "./pages/admin/LiveStreamsList";
 import LiveStreamEditor from "./pages/admin/LiveStreamEditor";
 import NewsletterSubscribers from "./pages/admin/NewsletterSubscribers";
+import NewsletterCompose from "./pages/admin/NewsletterCompose";
 import Unsubscribe from "./pages/Unsubscribe";
+import ConfirmNewsletter from "./pages/ConfirmNewsletter";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +65,7 @@ const App = () => (
               <Route path="/contact" element={<Contact />} />
               <Route path="/standards" element={<EditorialStandards />} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
+              <Route path="/confirm-newsletter" element={<ConfirmNewsletter />} />
               <Route path="/breaking" element={<CategoryPage />} />
               <Route path="/research" element={<CategoryPage />} />
               <Route path="/companies" element={<CategoryPage />} />
@@ -91,6 +94,7 @@ const App = () => (
               <Route path="/admin/streams/new" element={<LiveStreamEditor />} />
               <Route path="/admin/streams/:id" element={<LiveStreamEditor />} />
               <Route path="/admin/newsletter" element={<NewsletterSubscribers />} />
+              <Route path="/admin/newsletter/compose" element={<NewsletterCompose />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
