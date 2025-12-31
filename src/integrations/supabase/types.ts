@@ -368,6 +368,45 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_newsletters: {
+        Row: {
+          content: string
+          created_at: string
+          failed_count: number | null
+          id: string
+          scheduled_for: string
+          sent_at: string | null
+          sent_count: number | null
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          failed_count?: number | null
+          id?: string
+          scheduled_for: string
+          sent_at?: string | null
+          sent_count?: number | null
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          failed_count?: number | null
+          id?: string
+          scheduled_for?: string
+          sent_at?: string | null
+          sent_count?: number | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           autumn_customer_id: string | null

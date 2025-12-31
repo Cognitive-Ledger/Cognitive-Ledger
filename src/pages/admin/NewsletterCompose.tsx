@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,14 +13,21 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Send, Users, AlertCircle } from "lucide-react";
+import { Send, Users, AlertCircle, Clock, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
+import { Switch } from "@/components/ui/switch";
+import { format } from "date-fns";
 
 export default function NewsletterCompose() {
   const [subject, setSubject] = useState("");
   const [content, setContent] = useState("");
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: subscriberCount } = useQuery({
     queryKey: ["newsletter-subscriber-count"],
@@ -57,12 +65,54 @@ export default function NewsletterCompose() {
     },
   });
 
+  const scheduleNewsletter = useMutation({
+    mutationFn: async () => {
+      const scheduledFor = new Date(`${scheduledDate}T${scheduledTime}`);
+      
+      if (scheduledFor <= new Date()) {
+        throw new Error("Scheduled time must be in the future");
+      }
+
+      const { error } = await supabase
+        .from("scheduled_newsletters")
+        .insert({
+          subject,
+          content,
+          scheduled_for: scheduledFor.toISOString(),
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Newsletter scheduled successfully!");
+      queryClient.invalidateQueries({ queryKey: ["scheduled-newsletters"] });
+      setSubject("");
+      setContent("");
+      setScheduledDate("");
+      setScheduledTime("");
+      setIsScheduled(false);
+      navigate("/admin/newsletter");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to schedule newsletter");
+    },
+  });
+
   const handleSend = () => {
     if (!subject.trim() || !content.trim()) {
       toast.error("Please fill in both subject and content");
       return;
     }
-    sendNewsletter.mutate();
+
+    if (isScheduled) {
+      if (!scheduledDate || !scheduledTime) {
+        toast.error("Please select date and time for scheduled send");
+        return;
+      }
+      scheduleNewsletter.mutate();
+    } else {
+      sendNewsletter.mutate();
+    }
   };
 
   const previewHtml = `
@@ -81,13 +131,16 @@ export default function NewsletterCompose() {
     </div>
   `;
 
+  const isPending = sendNewsletter.isPending || scheduleNewsletter.isPending;
+  const minDate = format(new Date(), "yyyy-MM-dd");
+
   return (
     <AdminLayout>
       <div className="space-y-6 max-w-4xl">
         <div>
           <h1 className="headline-secondary">Compose Newsletter</h1>
           <p className="text-muted-foreground mt-1">
-            Send a newsletter to all active subscribers
+            Send or schedule a newsletter to all active subscribers
           </p>
         </div>
 
@@ -141,21 +194,79 @@ export default function NewsletterCompose() {
               />
             </div>
 
+            {/* Schedule Toggle */}
+            <Card className="border-dashed">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <Clock className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <Label htmlFor="schedule-toggle" className="text-base font-medium">
+                        Schedule for later
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Send this newsletter at a specific date and time
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="schedule-toggle"
+                    checked={isScheduled}
+                    onCheckedChange={setIsScheduled}
+                  />
+                </div>
+
+                {isScheduled && (
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
+                    <div className="space-y-2">
+                      <Label htmlFor="scheduled-date">Date</Label>
+                      <Input
+                        id="scheduled-date"
+                        type="date"
+                        min={minDate}
+                        value={scheduledDate}
+                        onChange={(e) => setScheduledDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="scheduled-time">Time</Label>
+                      <Input
+                        id="scheduled-time"
+                        type="time"
+                        value={scheduledTime}
+                        onChange={(e) => setScheduledTime(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <div className="flex gap-3 pt-4">
               <Button
                 onClick={handleSend}
                 disabled={
-                  sendNewsletter.isPending ||
+                  isPending ||
                   !subject.trim() ||
                   !content.trim() ||
-                  subscriberCount === 0
+                  subscriberCount === 0 ||
+                  (isScheduled && (!scheduledDate || !scheduledTime))
                 }
                 className="gap-2"
               >
-                <Send className="w-4 h-4" />
-                {sendNewsletter.isPending
-                  ? "Sending..."
-                  : `Send to ${subscriberCount} subscribers`}
+                {isScheduled ? (
+                  <>
+                    <Calendar className="w-4 h-4" />
+                    {scheduleNewsletter.isPending ? "Scheduling..." : "Schedule Newsletter"}
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    {sendNewsletter.isPending
+                      ? "Sending..."
+                      : `Send to ${subscriberCount} subscribers`}
+                  </>
+                )}
               </Button>
             </div>
           </TabsContent>
