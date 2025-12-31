@@ -6,6 +6,12 @@ verify_jwt = false
 [functions.newsletter-unsubscribe]
 verify_jwt = false
 
+[functions.newsletter-confirm]
+verify_jwt = false
+
+[functions.newsletter-send]
+verify_jwt = true
+
 [functions.article-ai-assist]
 verify_jwt = false
 

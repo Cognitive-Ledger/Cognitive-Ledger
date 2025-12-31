@@ -14,7 +14,6 @@ interface SubscribeRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -31,7 +30,6 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Create Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -39,47 +37,65 @@ const handler = async (req: Request): Promise<Response> => {
     // Check if already subscribed
     const { data: existing } = await supabase
       .from("newsletter_subscribers")
-      .select("id, is_active")
+      .select("id, is_active, confirmed_at, confirmation_token")
       .eq("email", email.toLowerCase())
       .maybeSingle();
 
+    let confirmationToken: string;
+
     if (existing) {
-      if (existing.is_active) {
-        console.log("Email already subscribed:", email);
+      if (existing.is_active && existing.confirmed_at) {
+        console.log("Email already subscribed and confirmed:", email);
         return new Response(
           JSON.stringify({ message: "You're already subscribed!", alreadySubscribed: true }),
           { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
+      } else if (!existing.confirmed_at) {
+        // Resend confirmation email
+        confirmationToken = existing.confirmation_token;
+        console.log("Resending confirmation for:", email);
       } else {
-        // Reactivate subscription
+        // Reactivate subscription - generate new token
+        const newToken = crypto.randomUUID();
         await supabase
           .from("newsletter_subscribers")
-          .update({ is_active: true, unsubscribed_at: null })
+          .update({ 
+            is_active: false, 
+            unsubscribed_at: null,
+            confirmed_at: null,
+            confirmation_token: newToken
+          })
           .eq("id", existing.id);
-        console.log("Reactivated subscription for:", email);
+        confirmationToken = newToken;
+        console.log("Reactivation pending confirmation for:", email);
       }
     } else {
-      // Insert new subscriber
+      // Insert new subscriber with pending confirmation
+      const newToken = crypto.randomUUID();
       const { error: insertError } = await supabase
         .from("newsletter_subscribers")
-        .insert({ email: email.toLowerCase() });
+        .insert({ 
+          email: email.toLowerCase(),
+          is_active: false,
+          confirmation_token: newToken
+        });
 
       if (insertError) {
         console.error("Error inserting subscriber:", insertError);
         throw new Error("Failed to save subscription");
       }
-      console.log("New subscriber added:", email);
+      confirmationToken = newToken;
+      console.log("New subscriber pending confirmation:", email);
     }
 
-    // Get the site URL for unsubscribe link
+    // Send confirmation email
     const siteUrl = Deno.env.get("SITE_URL") || "https://ibabjqkkzypvjoiixnaz.lovableproject.com";
-    const unsubscribeUrl = `${siteUrl}/unsubscribe?email=${encodeURIComponent(email)}`;
+    const confirmUrl = `${siteUrl}/confirm-newsletter?token=${confirmationToken}`;
 
-    // Send welcome email
     const emailResponse = await resend.emails.send({
       from: "The Intelligence Age <newsletter@resend.dev>",
       to: [email],
-      subject: "Welcome to The Intelligence Age Newsletter! 🤖",
+      subject: "Confirm your subscription to The Intelligence Age",
       html: `
         <!DOCTYPE html>
         <html>
@@ -94,30 +110,29 @@ const handler = async (req: Request): Promise<Response> => {
           </div>
           
           <div style="background: linear-gradient(135deg, #f8f8f8 0%, #fff 100%); border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-            <h2 style="margin-top: 0;">Welcome aboard! 🎉</h2>
-            <p>Thank you for subscribing to The Intelligence Age newsletter.</p>
-            <p>Every week, you'll receive:</p>
-            <ul style="padding-left: 20px;">
-              <li>The most important AI developments</li>
-              <li>In-depth analysis and insights</li>
-              <li>Exclusive content and early access</li>
-            </ul>
-            <p>Stay ahead of the curve in the rapidly evolving world of artificial intelligence.</p>
+            <h2 style="margin-top: 0;">Confirm your subscription</h2>
+            <p>Thanks for signing up! Please confirm your email address to start receiving our newsletter.</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${confirmUrl}" style="display: inline-block; background: #1a1a1a; color: #fff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                Confirm Email
+              </a>
+            </div>
+            <p style="color: #666; font-size: 14px;">Or copy and paste this link in your browser:</p>
+            <p style="word-break: break-all; color: #666; font-size: 12px;">${confirmUrl}</p>
           </div>
           
-          <div style="text-align: center; color: #888; font-size: 12px; border-top: 1px solid #eee; padding-top: 20px;">
-            <p>You received this email because you subscribed to The Intelligence Age newsletter.</p>
-            <p><a href="${unsubscribeUrl}" style="color: #888; text-decoration: underline;">Unsubscribe</a></p>
+          <div style="text-align: center; color: #888; font-size: 12px;">
+            <p>If you didn't sign up for this newsletter, you can safely ignore this email.</p>
           </div>
         </body>
         </html>
       `,
     });
 
-    console.log("Welcome email sent successfully:", emailResponse);
+    console.log("Confirmation email sent:", emailResponse);
 
     return new Response(
-      JSON.stringify({ success: true, message: "Successfully subscribed!" }),
+      JSON.stringify({ success: true, message: "Please check your email to confirm your subscription!" }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: any) {
