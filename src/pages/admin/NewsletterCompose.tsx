@@ -3,18 +3,23 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Send, Eye, Users, AlertCircle } from "lucide-react";
+import { Send, Users, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
 
 export default function NewsletterCompose() {
   const [subject, setSubject] = useState("");
   const [content, setContent] = useState("");
-  const [showPreview, setShowPreview] = useState(false);
 
   const { data: subscriberCount } = useQuery({
     queryKey: ["newsletter-subscriber-count"],
@@ -79,7 +84,6 @@ export default function NewsletterCompose() {
   return (
     <AdminLayout>
       <div className="space-y-6 max-w-4xl">
-        {/* Header */}
         <div>
           <h1 className="headline-secondary">Compose Newsletter</h1>
           <p className="text-muted-foreground mt-1">
@@ -87,7 +91,6 @@ export default function NewsletterCompose() {
           </p>
         </div>
 
-        {/* Stats Card */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -106,12 +109,12 @@ export default function NewsletterCompose() {
           <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
             <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
             <p className="text-sm text-amber-700 dark:text-amber-300">
-              No confirmed subscribers yet. Newsletters can only be sent to confirmed subscribers.
+              No confirmed subscribers yet. Newsletters can only be sent to confirmed
+              subscribers.
             </p>
           </div>
         )}
 
-        {/* Compose Form */}
         <Tabs defaultValue="compose" className="space-y-4">
           <TabsList>
             <TabsTrigger value="compose">Compose</TabsTrigger>
@@ -130,27 +133,29 @@ export default function NewsletterCompose() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="content">Content (HTML supported)</Label>
-              <Textarea
-                id="content"
-                placeholder="Write your newsletter content here. You can use HTML for formatting..."
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="min-h-[300px] font-mono text-sm"
+              <Label>Content</Label>
+              <RichTextEditor
+                content={content}
+                onChange={setContent}
+                placeholder="Write your newsletter here..."
               />
-              <p className="text-xs text-muted-foreground">
-                Tip: Use HTML tags like &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;a href=""&gt; for formatting
-              </p>
             </div>
 
             <div className="flex gap-3 pt-4">
               <Button
                 onClick={handleSend}
-                disabled={sendNewsletter.isPending || !subject.trim() || !content.trim() || subscriberCount === 0}
+                disabled={
+                  sendNewsletter.isPending ||
+                  !subject.trim() ||
+                  !content.trim() ||
+                  subscriberCount === 0
+                }
                 className="gap-2"
               >
                 <Send className="w-4 h-4" />
-                {sendNewsletter.isPending ? "Sending..." : `Send to ${subscriberCount} subscribers`}
+                {sendNewsletter.isPending
+                  ? "Sending..."
+                  : `Send to ${subscriberCount} subscribers`}
               </Button>
             </div>
           </TabsContent>
@@ -159,13 +164,11 @@ export default function NewsletterCompose() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Email Preview</CardTitle>
-                <CardDescription>
-                  Subject: {subject || "(No subject)"}
-                </CardDescription>
+                <CardDescription>Subject: {subject || "(No subject)"}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div 
-                  className="bg-white text-black rounded-lg p-4 border"
+                <div
+                  className="rounded-lg p-4 border border-border bg-card text-card-foreground"
                   dangerouslySetInnerHTML={{ __html: previewHtml }}
                 />
               </CardContent>
@@ -176,3 +179,4 @@ export default function NewsletterCompose() {
     </AdminLayout>
   );
 }
+
