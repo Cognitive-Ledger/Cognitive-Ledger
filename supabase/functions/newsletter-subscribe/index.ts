@@ -71,6 +71,10 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("New subscriber added:", email);
     }
 
+    // Get the site URL for unsubscribe link
+    const siteUrl = Deno.env.get("SITE_URL") || "https://ibabjqkkzypvjoiixnaz.lovableproject.com";
+    const unsubscribeUrl = `${siteUrl}/unsubscribe?email=${encodeURIComponent(email)}`;
+
     // Send welcome email
     const emailResponse = await resend.emails.send({
       from: "The Intelligence Age <newsletter@resend.dev>",
@@ -101,8 +105,9 @@ const handler = async (req: Request): Promise<Response> => {
             <p>Stay ahead of the curve in the rapidly evolving world of artificial intelligence.</p>
           </div>
           
-          <div style="text-align: center; color: #888; font-size: 12px;">
+          <div style="text-align: center; color: #888; font-size: 12px; border-top: 1px solid #eee; padding-top: 20px;">
             <p>You received this email because you subscribed to The Intelligence Age newsletter.</p>
+            <p><a href="${unsubscribeUrl}" style="color: #888; text-decoration: underline;">Unsubscribe</a></p>
           </div>
         </body>
         </html>
