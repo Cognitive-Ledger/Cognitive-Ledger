@@ -1,12 +1,3 @@
-import {
-  MediaPlayer,
-  MediaOutlet,
-  MediaPoster,
-  MediaCommunitySkin,
-} from '@vidstack/react';
-import 'vidstack/styles/defaults.css';
-import 'vidstack/styles/community-skin/video.css';
-
 interface TextTrack {
   src: string;
   label: string;
@@ -84,17 +75,17 @@ export function VideoPlayer({ src, title, poster, className, textTracks }: Video
     }
   }
 
-  // Handle direct video files with Vidstack
+  // Handle direct video files with native HTML5 video
   return (
-    <MediaPlayer
-      title={title}
-      src={src}
-      className={`video-player ${className || ''}`}
-      crossorigin=""
-      playsInline
-    >
-      <MediaOutlet>
-        {poster && <MediaPoster alt={title || 'Video poster'} src={poster} />}
+    <div className={`video-player ${className || ''}`}>
+      <video
+        controls
+        playsInline
+        poster={poster}
+        className="w-full h-full"
+        title={title}
+      >
+        <source src={src} />
         {textTracks?.map((track, index) => (
           <track
             key={index}
@@ -105,8 +96,8 @@ export function VideoPlayer({ src, title, poster, className, textTracks }: Video
             default={track.default}
           />
         ))}
-      </MediaOutlet>
-      <MediaCommunitySkin />
-    </MediaPlayer>
+        Your browser does not support the video tag.
+      </video>
+    </div>
   );
 }
