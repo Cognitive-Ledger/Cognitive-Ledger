@@ -4,6 +4,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
+const FROM_EMAIL = Deno.env.get("NEWSLETTER_FROM") || "onboarding@resend.dev";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -19,6 +21,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    console.log("newsletter-confirm: request received");
     const { token }: ConfirmRequest = await req.json();
 
     if (!token) {
@@ -75,9 +78,9 @@ const handler = async (req: Request): Promise<Response> => {
     const siteUrl = Deno.env.get("SITE_URL") || "https://ibabjqkkzypvjoiixnaz.lovableproject.com";
     const unsubscribeUrl = `${siteUrl}/unsubscribe?email=${encodeURIComponent(subscriber.email)}`;
 
-    await resend.emails.send({
-      from: "The Intelligence Age <newsletter@resend.dev>",
-      to: [subscriber.email],
+     await resend.emails.send({
+       from: FROM_EMAIL,
+       to: [subscriber.email],
       subject: "Welcome to The Intelligence Age Newsletter! 🤖",
       html: `
         <!DOCTYPE html>
