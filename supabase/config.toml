@@ -1,5 +1,8 @@
 project_id = "ibabjqkkzypvjoiixnaz"
 
+[functions.newsletter-subscribe]
+verify_jwt = false
+
 [functions.article-ai-assist]
 verify_jwt = false
 
