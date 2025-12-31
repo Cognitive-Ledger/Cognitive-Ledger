@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet-async";
+import { Link } from "react-router-dom";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useArticles, useBreakingNews, useDailyBrief } from "@/hooks/useArticles";
 import { useModels } from "@/hooks/useModels";
@@ -115,34 +116,34 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-3">
-                  <a
-                    href="/admin/articles/new"
+                  <Link
+                    to="/admin/articles/new"
                     className="flex flex-col items-center justify-center p-4 rounded-lg border border-border hover:bg-secondary transition-colors"
                   >
                     <FileText className="h-6 w-6 mb-2 text-primary" />
                     <span className="text-sm font-medium">New Article</span>
-                  </a>
-                  <a
-                    href="/admin/models/new"
+                  </Link>
+                  <Link
+                    to="/admin/models/new"
                     className="flex flex-col items-center justify-center p-4 rounded-lg border border-border hover:bg-secondary transition-colors"
                   >
                     <Cpu className="h-6 w-6 mb-2 text-primary" />
                     <span className="text-sm font-medium">Add Model</span>
-                  </a>
-                  <a
-                    href="/admin/breaking/new"
+                  </Link>
+                  <Link
+                    to="/admin/breaking/new"
                     className="flex flex-col items-center justify-center p-4 rounded-lg border border-border hover:bg-secondary transition-colors"
                   >
                     <Zap className="h-6 w-6 mb-2 text-primary" />
                     <span className="text-sm font-medium">Breaking News</span>
-                  </a>
-                  <a
-                    href="/admin/daily-brief/new"
+                  </Link>
+                  <Link
+                    to="/admin/daily-brief/new"
                     className="flex flex-col items-center justify-center p-4 rounded-lg border border-border hover:bg-secondary transition-colors"
                   >
                     <Calendar className="h-6 w-6 mb-2 text-primary" />
                     <span className="text-sm font-medium">Daily Brief</span>
-                  </a>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
