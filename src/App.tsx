@@ -34,6 +34,8 @@ import PodcastsList from "./pages/admin/PodcastsList";
 import PodcastEditor from "./pages/admin/PodcastEditor";
 import LiveStreamsList from "./pages/admin/LiveStreamsList";
 import LiveStreamEditor from "./pages/admin/LiveStreamEditor";
+import NewsletterSubscribers from "./pages/admin/NewsletterSubscribers";
+import Unsubscribe from "./pages/Unsubscribe";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +62,7 @@ const App = () => (
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/standards" element={<EditorialStandards />} />
+              <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="/breaking" element={<CategoryPage />} />
               <Route path="/research" element={<CategoryPage />} />
               <Route path="/companies" element={<CategoryPage />} />
@@ -87,6 +90,7 @@ const App = () => (
               <Route path="/admin/streams" element={<LiveStreamsList />} />
               <Route path="/admin/streams/new" element={<LiveStreamEditor />} />
               <Route path="/admin/streams/:id" element={<LiveStreamEditor />} />
+              <Route path="/admin/newsletter" element={<NewsletterSubscribers />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
