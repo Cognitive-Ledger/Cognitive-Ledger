@@ -23,17 +23,26 @@ export function NewsletterSignup({ variant = "card", className = "" }: Newslette
     setIsSubmitting(true);
     
     try {
-      // For now, just show success - you can integrate with your email service later
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      
+      const { data, error } = await supabase.functions.invoke("newsletter-subscribe", {
+        body: { email: email.trim() },
+      });
+
+      if (error) throw error;
+
       setIsSuccess(true);
       setEmail("");
-      toast.success("You're subscribed! Check your inbox for confirmation.");
+      
+      if (data?.alreadySubscribed) {
+        toast.info("You're already subscribed!");
+      } else {
+        toast.success("You're subscribed! Check your inbox for a welcome email.");
+      }
       
       // Reset success state after 3 seconds
       setTimeout(() => setIsSuccess(false), 3000);
-    } catch (error) {
-      toast.error("Something went wrong. Please try again.");
+    } catch (error: any) {
+      console.error("Newsletter subscription error:", error);
+      toast.error(error.message || "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
