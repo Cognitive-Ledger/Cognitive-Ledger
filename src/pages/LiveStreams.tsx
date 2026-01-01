@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { VideoPlayer } from "@/components/video/VideoPlayer";
+import { CustomVideoPlayer } from "@/components/video/CustomVideoPlayer";
 import { useLiveChat } from "@/hooks/useLiveChat";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
@@ -153,14 +153,15 @@ export default function LiveStreams() {
   const renderStreamPlayer = (stream: LiveStream) => {
     const videoSource = getVideoSource(stream);
     
-    // Show video player if stream is live and has a video source
+    // Show custom video player if stream is live and has a video source
     if (stream.is_live && videoSource && !stream.is_premium) {
       return (
-        <VideoPlayer
+        <CustomVideoPlayer
           src={videoSource}
           title={stream.title}
           poster={stream.thumbnail_url || undefined}
           className="w-full h-full"
+          isLive={true}
         />
       );
     }
