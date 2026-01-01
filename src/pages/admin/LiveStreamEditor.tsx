@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Save, Loader2, Copy, Check } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Copy, Check, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,6 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
 export default function LiveStreamEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -21,7 +20,7 @@ export default function LiveStreamEditor() {
   const queryClient = useQueryClient();
   const isEditing = id && id !== "new";
   const [copied, setCopied] = useState<string | null>(null);
-
+  const [isGeneratingMux, setIsGeneratingMux] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -69,6 +68,35 @@ export default function LiveStreamEditor() {
   const generateStreamKey = () => {
     const key = `live_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
     setFormData({ ...formData, stream_key: key });
+  };
+
+  const generateMuxStream = async () => {
+    setIsGeneratingMux(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("mux-create-stream");
+      
+      if (error) throw error;
+      
+      setFormData({
+        ...formData,
+        stream_key: data.stream_key,
+        playback_url: data.playback_url,
+      });
+      
+      toast({
+        title: "Mux stream created",
+        description: `RTMP URL: ${data.rtmp_url}`,
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to create Mux stream";
+      toast({
+        title: "Error creating Mux stream",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingMux(false);
+    }
   };
 
   const copyToClipboard = (text: string, field: string) => {
@@ -212,10 +240,28 @@ export default function LiveStreamEditor() {
               <CardHeader>
                 <CardTitle className="text-lg">Custom Stream Setup</CardTitle>
                 <CardDescription>
-                  Use these settings to stream directly to your custom video player instead of YouTube
+                  Generate stream credentials from Mux or enter your own HLS details
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <Button 
+                  type="button" 
+                  variant="secondary"
+                  onClick={generateMuxStream}
+                  disabled={isGeneratingMux}
+                  className="w-full"
+                >
+                  {isGeneratingMux ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Zap className="h-4 w-4 mr-2" />
+                  )}
+                  Generate from Mux
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Creates a new live stream on Mux and auto-fills the stream key and HLS playback URL
+                </p>
+
                 <div className="space-y-2">
                   <Label htmlFor="stream_key">Stream Key</Label>
                   <div className="flex gap-2">
@@ -223,11 +269,11 @@ export default function LiveStreamEditor() {
                       id="stream_key"
                       value={formData.stream_key}
                       onChange={(e) => setFormData({ ...formData, stream_key: e.target.value })}
-                      placeholder="Generate or enter a stream key"
+                      placeholder="Generate from Mux or enter manually"
                       className="flex-1"
                     />
                     <Button type="button" variant="outline" onClick={generateStreamKey}>
-                      Generate
+                      Manual
                     </Button>
                     {formData.stream_key && (
                       <Button 
@@ -241,7 +287,7 @@ export default function LiveStreamEditor() {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Use this key in your streaming software (OBS, etc.)
+                    RTMP Server: rtmps://global-live.mux.com:443/app
                   </p>
                 </div>
 
