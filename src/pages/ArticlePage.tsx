@@ -7,7 +7,7 @@ import { ArticleCard } from "@/components/articles/ArticleCard";
 import { EmbedRenderer, SingleEmbed, parseContentWithEmbeds, getUnplacedEmbeds, type Embed } from "@/components/articles/EmbedRenderer";
 import { parseVisualPlaceholders, VisualContentRenderer } from "@/components/articles/VisualContentRenderer";
 import { useArticle, useArticles } from "@/hooks/useArticles";
-import { VideoPlayer } from "@/components/video/VideoPlayer";
+import { CustomVideoPlayer } from "@/components/video/CustomVideoPlayer";
 import { Clock, ArrowLeft, Share2, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet-async";
@@ -190,34 +190,32 @@ export default function ArticlePage() {
           {/* Video Player for video articles */}
           {article.category === "video" && article.video_url && (
             <figure className="max-w-4xl mb-8">
-              <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                <VideoPlayer
-                  src={article.video_url}
-                  title={article.title}
-                  poster={article.image_url || undefined}
-                  textTracks={
-                    article.embeds && Array.isArray(article.embeds)
-                      ? (() => {
-                          const captionEmbed = (article.embeds as unknown[]).find(
-                            (e: unknown) => typeof e === 'object' && e !== null && (e as Record<string, unknown>).type === 'captions'
-                          );
-                          if (captionEmbed && typeof captionEmbed === 'object') {
-                            const tracks = (captionEmbed as Record<string, unknown>).tracks;
-                            if (Array.isArray(tracks)) {
-                              return tracks.map((t: unknown) => ({
-                                src: (t as Record<string, string>).src,
-                                label: (t as Record<string, string>).label,
-                                language: (t as Record<string, string>).language || 'en',
-                                kind: 'subtitles' as const,
-                              }));
-                            }
+              <CustomVideoPlayer
+                src={article.video_url}
+                title={article.title}
+                poster={article.image_url || undefined}
+                textTracks={
+                  article.embeds && Array.isArray(article.embeds)
+                    ? (() => {
+                        const captionEmbed = (article.embeds as unknown[]).find(
+                          (e: unknown) => typeof e === 'object' && e !== null && (e as Record<string, unknown>).type === 'captions'
+                        );
+                        if (captionEmbed && typeof captionEmbed === 'object') {
+                          const tracks = (captionEmbed as Record<string, unknown>).tracks;
+                          if (Array.isArray(tracks)) {
+                            return tracks.map((t: unknown) => ({
+                              src: (t as Record<string, string>).src,
+                              label: (t as Record<string, string>).label,
+                              language: (t as Record<string, string>).language || 'en',
+                              kind: 'subtitles' as const,
+                            }));
                           }
-                          return [];
-                        })()
-                      : []
-                  }
-                />
-              </div>
+                        }
+                        return [];
+                      })()
+                    : []
+                }
+              />
             </figure>
           )}
 
