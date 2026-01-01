@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
@@ -16,11 +16,15 @@ import {
   Lock,
   MessageCircle,
   Send,
-  Video
+  Video,
+  LogIn
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { VideoPlayer } from "@/components/video/VideoPlayer";
+import { useLiveChat } from "@/hooks/useLiveChat";
+import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 
 interface LiveStream {
   id: string;
@@ -34,13 +38,6 @@ interface LiveStream {
   viewers_count: number;
   playback_url: string | null;
   stream_key: string | null;
-}
-
-interface ChatMessage {
-  id: string;
-  user: string;
-  message: string;
-  timestamp: Date;
 }
 
 function formatScheduledTime(dateStr: string): string {
@@ -66,12 +63,8 @@ function formatScheduledTime(dateStr: string): string {
 
 export default function LiveStreams() {
   const [selectedStream, setSelectedStream] = useState<LiveStream | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { id: "1", user: "AI_Enthusiast", message: "Excited for this stream! 🎉", timestamp: new Date() },
-    { id: "2", user: "TechReviewer", message: "Great topic today", timestamp: new Date() },
-    { id: "3", user: "DataScientist42", message: "Any predictions on AGI timeline?", timestamp: new Date() },
-  ]);
   const [newMessage, setNewMessage] = useState("");
+  const { user } = useAuth();
 
   const { data: liveStreams, isLoading } = useQuery({
     queryKey: ["liveStreams"],
@@ -134,16 +127,16 @@ export default function LiveStreams() {
   const upcoming = displayStreams.filter(s => !s.is_live);
   const currentStream = selectedStream || liveNow[0];
 
-  const handleSendMessage = () => {
+  // Use the live chat hook
+  const { messages: chatMessages, sendMessage } = useLiveChat(currentStream?.id || null);
+
+  const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
     
-    setChatMessages(prev => [...prev, {
-      id: Date.now().toString(),
-      user: "You",
-      message: newMessage,
-      timestamp: new Date(),
-    }]);
-    setNewMessage("");
+    const success = await sendMessage(newMessage);
+    if (success) {
+      setNewMessage("");
+    }
   };
 
   // Determine video source - prefer playback_url (HLS) over stream_url (YouTube/external)
@@ -362,18 +355,23 @@ export default function LiveStreams() {
                 <CardContent className="flex-1 flex flex-col p-0">
                   <ScrollArea className="flex-1 p-4">
                     <div className="space-y-4">
+                      {chatMessages.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No messages yet. Be the first to chat!
+                        </p>
+                      )}
                       {chatMessages.map((msg) => (
                         <div key={msg.id} className="flex gap-2">
                           <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                             <span className="text-xs font-semibold text-primary">
-                              {msg.user[0].toUpperCase()}
+                              {msg.user_name[0].toUpperCase()}
                             </span>
                           </div>
                           <div>
                             <div className="flex items-baseline gap-2">
-                              <span className="font-semibold text-sm">{msg.user}</span>
+                              <span className="font-semibold text-sm">{msg.user_name}</span>
                               <span className="text-xs text-caption">
-                                {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
                             <p className="text-sm text-body-text">{msg.message}</p>
@@ -383,20 +381,29 @@ export default function LiveStreams() {
                     </div>
                   </ScrollArea>
                   <div className="p-4 border-t">
-                    <form 
-                      onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-                      className="flex gap-2"
-                    >
-                      <Input
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Send a message..."
-                        className="flex-1"
-                      />
-                      <Button type="submit" size="icon">
-                        <Send className="h-4 w-4" />
-                      </Button>
-                    </form>
+                    {user ? (
+                      <form 
+                        onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
+                        className="flex gap-2"
+                      >
+                        <Input
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          placeholder="Send a message..."
+                          className="flex-1"
+                        />
+                        <Button type="submit" size="icon">
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </form>
+                    ) : (
+                      <Link to="/auth">
+                        <Button variant="outline" className="w-full">
+                          <LogIn className="h-4 w-4 mr-2" />
+                          Sign in to chat
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 </CardContent>
               </Card>
