@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.process-subscription]
 verify_jwt = false
+
+[functions.mux-create-stream]
+verify_jwt = false
