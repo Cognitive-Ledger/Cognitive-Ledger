@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Save, Loader2, Copy, Check, Zap } from "lucide-react";
+import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,15 +12,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { ImageUploader } from "@/components/admin/ImageUploader";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
 export default function LiveStreamEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isEditing = id && id !== "new";
-  const [copied, setCopied] = useState<string | null>(null);
-  const [isGeneratingMux, setIsGeneratingMux] = useState(false);
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -29,8 +28,6 @@ export default function LiveStreamEditor() {
     scheduled_at: new Date().toISOString().slice(0, 16),
     is_premium: false,
     is_live: false,
-    stream_key: "",
-    playback_url: "",
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -59,51 +56,9 @@ export default function LiveStreamEditor() {
         scheduled_at: new Date(stream.scheduled_at).toISOString().slice(0, 16),
         is_premium: stream.is_premium || false,
         is_live: stream.is_live || false,
-        stream_key: stream.stream_key || "",
-        playback_url: stream.playback_url || "",
       });
     }
   }, [stream]);
-
-  const generateStreamKey = () => {
-    const key = `live_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-    setFormData({ ...formData, stream_key: key });
-  };
-
-  const generateMuxStream = async () => {
-    setIsGeneratingMux(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("mux-create-stream");
-      
-      if (error) throw error;
-      
-      setFormData({
-        ...formData,
-        stream_key: data.stream_key,
-        playback_url: data.playback_url,
-      });
-      
-      toast({
-        title: "Mux stream created",
-        description: `RTMP URL: ${data.rtmp_url}`,
-      });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to create Mux stream";
-      toast({
-        title: "Error creating Mux stream",
-        description: message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsGeneratingMux(false);
-    }
-  };
-
-  const copyToClipboard = (text: string, field: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(field);
-    setTimeout(() => setCopied(null), 2000);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,13 +67,11 @@ export default function LiveStreamEditor() {
     const payload = {
       title: formData.title,
       description: formData.description,
-      stream_url: formData.stream_url,
-      thumbnail_url: formData.thumbnail_url,
+      stream_url: formData.stream_url || null,
+      thumbnail_url: formData.thumbnail_url || null,
       scheduled_at: new Date(formData.scheduled_at).toISOString(),
       is_premium: formData.is_premium,
       is_live: formData.is_live,
-      stream_key: formData.stream_key,
-      playback_url: formData.playback_url,
     };
 
     try {
@@ -236,100 +189,17 @@ export default function LiveStreamEditor() {
               bucket="stream-thumbnails"
             />
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Custom Stream Setup</CardTitle>
-                <CardDescription>
-                  Generate stream credentials from Mux or enter your own HLS details
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Button 
-                  type="button" 
-                  variant="secondary"
-                  onClick={generateMuxStream}
-                  disabled={isGeneratingMux}
-                  className="w-full"
-                >
-                  {isGeneratingMux ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Zap className="h-4 w-4 mr-2" />
-                  )}
-                  Generate from Mux
-                </Button>
-                <p className="text-xs text-muted-foreground text-center">
-                  Creates a new live stream on Mux and auto-fills the stream key and HLS playback URL
-                </p>
-
-                <div className="space-y-2">
-                  <Label htmlFor="stream_key">Stream Key</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="stream_key"
-                      value={formData.stream_key}
-                      onChange={(e) => setFormData({ ...formData, stream_key: e.target.value })}
-                      placeholder="Generate from Mux or enter manually"
-                      className="flex-1"
-                    />
-                    <Button type="button" variant="outline" onClick={generateStreamKey}>
-                      Manual
-                    </Button>
-                    {formData.stream_key && (
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => copyToClipboard(formData.stream_key, 'stream_key')}
-                      >
-                        {copied === 'stream_key' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      </Button>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    RTMP Server: rtmps://global-live.mux.com:443/app
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="playback_url">HLS Playback URL</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="playback_url"
-                      value={formData.playback_url}
-                      onChange={(e) => setFormData({ ...formData, playback_url: e.target.value })}
-                      placeholder="https://your-stream-server.com/live/stream.m3u8"
-                      className="flex-1"
-                    />
-                    {formData.playback_url && (
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => copyToClipboard(formData.playback_url, 'playback_url')}
-                      >
-                        {copied === 'playback_url' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      </Button>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    The HLS URL for the custom video player (e.g., from your media server)
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
             <div className="space-y-2">
-              <Label htmlFor="stream_url">YouTube/External Stream URL (Fallback)</Label>
+              <Label htmlFor="stream_url">YouTube Live URL</Label>
               <Input
                 id="stream_url"
                 type="url"
                 value={formData.stream_url}
                 onChange={(e) => setFormData({ ...formData, stream_url: e.target.value })}
-                placeholder="https://youtube.com/live/..."
+                placeholder="https://youtube.com/live/... or https://youtu.be/..."
               />
               <p className="text-xs text-muted-foreground">
-                Only used if no HLS playback URL is set
+                Paste the YouTube Live stream URL. It will be embedded using our video player.
               </p>
             </div>
 
