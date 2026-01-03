@@ -36,7 +36,7 @@ Additional Instructions:
 - Tone: ${toneInstructions[options.tone] || toneInstructions.professional}
 - Length: ${lengthInstructions[options.length] || lengthInstructions.medium}
 ${options.targetKeywords ? `- Target Keywords: Naturally incorporate these keywords: ${options.targetKeywords}` : ""}
-${options.includeDataViz ? `- Include data visualization suggestions: Add placeholders like [CHART: description of chart] or [DIAGRAM: description] or [GRAPH: description] where visual data representations would enhance the article` : ""}
+${options.includeDataViz ? `- Include data visualizations: Embed real charts, graphs, and benchmark images from sources when available. Use <img src="URL" alt="description" class="article-image" /> for extracted images.` : ""}
 ${options.includeSources ? "- Include source citations: Reference sources with [Source: name/URL] format where appropriate" : ""}
 ${options.includeQuotes ? "- Include expert quotes: Add relevant expert opinions or quotes where they strengthen the narrative" : ""}
 - Creativity level: ${options.creativityLevel}% (0=very factual and conservative, 100=very creative and bold)
@@ -116,9 +116,11 @@ ${articleOptions}
 Guidelines:
 - Synthesize research from multiple sources with proper attribution
 - Include inline citations like [Source: name] that reference the researched sources
-- Where data comparisons exist, add visualization placeholders: [CHART: description] or [GRAPH: description]
-- Where processes or architectures are discussed, add: [DIAGRAM: description]
-- Suggest relevant images: [IMAGE: description of recommended image]
+- CRITICAL: Use actual images from the sources (marked as [EXTRACTED_IMAGE: url from source]) 
+  - Insert benchmark charts, performance graphs, and comparison diagrams found in sources using <img src="URL" alt="description" class="article-image" />
+  - Prioritize images showing: benchmark scores, performance comparisons, architecture diagrams, data visualizations
+  - Do NOT suggest placeholder images like [CHART: description] - use REAL images from the extracted sources
+  - Include relevant screenshots, diagrams, and infographics from the original sources
 - Simple content: Accessible to general audience
 - Technical content: Deep analysis for experts
 - Use HTML tags for formatting including <blockquote> for key quotes
@@ -226,7 +228,7 @@ async function scrapeWithJina(url: string): Promise<ScrapedContent> {
   }
 }
 
-// Validate image URL
+// Validate image URL - prioritize benchmark, chart, and diagram images
 function isValidImageUrl(url: string): boolean {
   if (!url || url.length < 10) return false;
   
@@ -235,12 +237,12 @@ function isValidImageUrl(url: string): boolean {
   
   // Skip tiny icons, tracking pixels, and common non-content images
   const skipPatterns = [
-    "favicon", "icon", "logo", "avatar",
+    "favicon", "icon-", "logo-small",
     "tracking", "pixel", "beacon",
     "badge", "button", "banner-ad",
-    "ads", "advert", "sponsor",
+    "ads/", "advert", "sponsor",
     "1x1", "2x2", "transparent.gif",
-    "spacer", "blank"
+    "spacer", "blank.gif", "clear.gif"
   ];
   
   const lowerUrl = url.toLowerCase();
@@ -248,12 +250,25 @@ function isValidImageUrl(url: string): boolean {
     if (lowerUrl.includes(pattern)) return false;
   }
   
+  // Prioritize benchmark, chart, graph, and diagram images
+  const priorityPatterns = [
+    "benchmark", "chart", "graph", "diagram", 
+    "comparison", "performance", "results",
+    "score", "test", "evaluation", "metric",
+    "architecture", "model", "framework"
+  ];
+  
+  for (const pattern of priorityPatterns) {
+    if (lowerUrl.includes(pattern)) return true;
+  }
+  
   // Check for common image extensions or image CDN patterns
   const imagePatterns = [
     ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg",
     "/image/", "/images/", "/img/", "/photos/",
     "cloudinary.com", "imgix.net", "unsplash.com",
-    "imgur.com", "wp-content/uploads"
+    "imgur.com", "wp-content/uploads", "/assets/",
+    "/media/", "/static/", "cdn.", "res.cloudinary"
   ];
   
   for (const pattern of imagePatterns) {

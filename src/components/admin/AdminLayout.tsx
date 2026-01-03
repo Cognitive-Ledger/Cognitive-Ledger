@@ -14,6 +14,7 @@ import {
   Headphones,
   Radio,
   Mail,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,6 +33,7 @@ const navigation = [
   { name: "Breaking News", href: "/admin/breaking", icon: Zap },
   { name: "Daily Brief", href: "/admin/daily-brief", icon: Calendar },
   { name: "Newsletter", href: "/admin/newsletter", icon: Mail },
+  { name: "Team", href: "/admin/team", icon: Users },
 ];
 
 export function AdminLayout({ children }: AdminLayoutProps) {
