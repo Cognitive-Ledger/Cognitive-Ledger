@@ -62,6 +62,50 @@ export type Database = {
         }
         Relationships: []
       }
+      article_submissions: {
+        Row: {
+          article_id: string | null
+          created_at: string
+          feedback: string | null
+          id: string
+          reviewed_at: string | null
+          reviewer_id: string | null
+          status: string
+          submitted_at: string
+          submitter_id: string
+        }
+        Insert: {
+          article_id?: string | null
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          submitted_at?: string
+          submitter_id: string
+        }
+        Update: {
+          article_id?: string | null
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          submitted_at?: string
+          submitter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "article_submissions_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       articles: {
         Row: {
           author: string
@@ -78,10 +122,14 @@ export type Database = {
           is_featured: boolean
           published_at: string
           reading_time: number
+          review_feedback: string | null
+          reviewed_at: string | null
+          reviewer_id: string | null
           scheduled_for: string | null
           simple_content: string | null
           slug: string
           status: string | null
+          submitter_id: string | null
           technical_content: string | null
           technical_impact: Database["public"]["Enums"]["impact_level"] | null
           title: string
@@ -103,10 +151,14 @@ export type Database = {
           is_featured?: boolean
           published_at?: string
           reading_time?: number
+          review_feedback?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
           scheduled_for?: string | null
           simple_content?: string | null
           slug: string
           status?: string | null
+          submitter_id?: string | null
           technical_content?: string | null
           technical_impact?: Database["public"]["Enums"]["impact_level"] | null
           title: string
@@ -128,10 +180,14 @@ export type Database = {
           is_featured?: boolean
           published_at?: string
           reading_time?: number
+          review_feedback?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
           scheduled_for?: string | null
           simple_content?: string | null
           slug?: string
           status?: string | null
+          submitter_id?: string | null
           technical_content?: string | null
           technical_impact?: Database["public"]["Enums"]["impact_level"] | null
           title?: string

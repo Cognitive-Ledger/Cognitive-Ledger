@@ -1,27 +1,31 @@
 import { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useHasEditorialAccess, AppRole } from "@/hooks/useUserRole";
-import {
-  LayoutDashboard,
-  FileText,
-  Cpu,
-  Zap,
-  Calendar,
-  LogOut,
-  ChevronLeft,
-  Video,
-  Headphones,
-  Radio,
-  Mail,
-  Users,
-  Send,
-  Clock,
-  Shield,
-} from "lucide-react";
+import { useHasEditorialAccess } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import {
+  LayoutDashboard,
+  FileText,
+  Send,
+  Clock,
+  LogOut,
+  Video,
+  Brain,
+  Headphones,
+  Radio,
+  Zap,
+  Calendar,
+  Mail,
+  Users,
+  ClipboardCheck,
+  Shield,
+  ChevronLeft,
+} from "lucide-react";
+import type { Database } from "@/integrations/supabase/types";
+
+type AppRole = Database["public"]["Enums"]["app_role"];
 
 interface PortalLayoutProps {
   children: ReactNode;
@@ -32,7 +36,7 @@ const adminNavigation = [
   { name: "Dashboard", href: "/portal/admin", icon: LayoutDashboard },
   { name: "Articles", href: "/portal/admin/articles", icon: FileText },
   { name: "Videos", href: "/portal/admin/videos", icon: Video },
-  { name: "AI Models", href: "/portal/admin/models", icon: Cpu },
+  { name: "AI Models", href: "/portal/admin/models", icon: Brain },
   { name: "Podcasts", href: "/portal/admin/podcasts", icon: Headphones },
   { name: "Live Streams", href: "/portal/admin/streams", icon: Radio },
   { name: "Breaking News", href: "/portal/admin/breaking", icon: Zap },
@@ -45,12 +49,13 @@ const editorNavigation = [
   { name: "Dashboard", href: "/portal/editor", icon: LayoutDashboard },
   { name: "Articles", href: "/portal/editor/articles", icon: FileText },
   { name: "Videos", href: "/portal/editor/videos", icon: Video },
-  { name: "AI Models", href: "/portal/editor/models", icon: Cpu },
+  { name: "AI Models", href: "/portal/editor/models", icon: Brain },
   { name: "Podcasts", href: "/portal/editor/podcasts", icon: Headphones },
   { name: "Live Streams", href: "/portal/editor/streams", icon: Radio },
   { name: "Breaking News", href: "/portal/editor/breaking", icon: Zap },
   { name: "Daily Brief", href: "/portal/editor/daily-brief", icon: Calendar },
   { name: "Newsletter", href: "/portal/editor/newsletter", icon: Mail },
+  { name: "Review Queue", href: "/portal/editor/review", icon: ClipboardCheck },
 ];
 
 const contributorNavigation = [
