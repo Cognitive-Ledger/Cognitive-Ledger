@@ -32,7 +32,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
-export default function ArticlesList() {
+interface ArticlesListProps {
+  skipLayout?: boolean;
+}
+
+export default function ArticlesList({ skipLayout = false }: ArticlesListProps) {
   const { data: articles, isLoading } = useArticles();
   const { isAdmin } = useHasEditorialAccess();
   const [search, setSearch] = useState("");
@@ -63,12 +67,7 @@ export default function ArticlesList() {
     }
   };
 
-  return (
-    <>
-      <Helmet>
-        <title>Articles | Admin | Cognitive Ledger</title>
-      </Helmet>
-      <AdminLayout>
+  const content = (
         <div>
           <div className="flex items-center justify-between mb-6">
             <h1 className="headline-primary">Articles</h1>
@@ -190,6 +189,26 @@ export default function ArticlesList() {
             </div>
           )}
         </div>
+  );
+
+  if (skipLayout) {
+    return (
+      <>
+        <Helmet>
+          <title>Articles | Admin | Cognitive Ledger</title>
+        </Helmet>
+        {content}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Helmet>
+        <title>Articles | Admin | Cognitive Ledger</title>
+      </Helmet>
+      <AdminLayout>
+        {content}
       </AdminLayout>
     </>
   );

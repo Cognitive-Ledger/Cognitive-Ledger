@@ -21,24 +21,27 @@ import CookiePolicy from "./pages/CookiePolicy";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import EditorialStandards from "./pages/EditorialStandards";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import ArticlesList from "./pages/admin/ArticlesList";
-import ArticleEditor from "./pages/admin/ArticleEditor";
-import ModelsList from "./pages/admin/ModelsList";
-import ModelEditor from "./pages/admin/ModelEditor";
-import BreakingNewsList from "./pages/admin/BreakingNewsList";
-import DailyBriefList from "./pages/admin/DailyBriefList";
-import VideoArticlesList from "./pages/admin/VideoArticlesList";
-import VideoArticleEditor from "./pages/admin/VideoArticleEditor";
-import PodcastsList from "./pages/admin/PodcastsList";
-import PodcastEditor from "./pages/admin/PodcastEditor";
-import LiveStreamsList from "./pages/admin/LiveStreamsList";
-import LiveStreamEditor from "./pages/admin/LiveStreamEditor";
-import NewsletterSubscribers from "./pages/admin/NewsletterSubscribers";
-import NewsletterCompose from "./pages/admin/NewsletterCompose";
-import TeamManagement from "./pages/admin/TeamManagement";
 import Unsubscribe from "./pages/Unsubscribe";
 import ConfirmNewsletter from "./pages/ConfirmNewsletter";
+
+// Portal
+import PortalAuth from "./pages/portal/PortalAuth";
+import AdminPortalDashboard from "./pages/portal/admin/AdminPortalDashboard";
+import AdminArticlesList from "./pages/portal/admin/AdminArticlesList";
+import EditorPortalDashboard from "./pages/portal/editor/EditorPortalDashboard";
+import EditorArticlesList from "./pages/portal/editor/EditorArticlesList";
+import ContributorDashboard from "./pages/portal/contributor/ContributorDashboard";
+import ContributorSubmissions from "./pages/portal/contributor/ContributorSubmissions";
+import ContributorPending from "./pages/portal/contributor/ContributorPending";
+import ContributorSubmit from "./pages/portal/contributor/ContributorSubmit";
+import {
+  AdminVideosList, AdminVideoEditor, AdminModelsList, AdminModelEditor,
+  AdminBreakingNews, AdminDailyBrief, AdminPodcastsList, AdminPodcastEditor,
+  AdminStreamsList, AdminStreamEditor, AdminNewsletter, AdminNewsletterCompose, AdminTeam,
+  EditorVideosList, EditorVideoEditor, EditorModelsList, EditorModelEditor,
+  EditorBreakingNews, EditorDailyBrief, EditorPodcastsList, EditorPodcastEditor,
+  EditorStreamsList, EditorStreamEditor, EditorNewsletter, EditorNewsletterCompose
+} from "./pages/portal/PortalPlaceholders";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +54,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
+              {/* Public routes */}
               <Route path="/" element={<Index />} />
               <Route path="/article/:slug" element={<ArticlePage />} />
               <Route path="/ai-index" element={<AIIndex />} />
@@ -75,29 +79,51 @@ const App = () => (
               <Route path="/opinion" element={<CategoryPage />} />
               <Route path="/explainers" element={<CategoryPage />} />
               <Route path="/video" element={<CategoryPage />} />
-              {/* Admin routes */}
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/articles" element={<ArticlesList />} />
-              <Route path="/admin/articles/new" element={<ArticleEditor />} />
-              <Route path="/admin/articles/:id" element={<ArticleEditor />} />
-              <Route path="/admin/videos" element={<VideoArticlesList />} />
-              <Route path="/admin/videos/new" element={<VideoArticleEditor />} />
-              <Route path="/admin/videos/:id" element={<VideoArticleEditor />} />
-              <Route path="/admin/models" element={<ModelsList />} />
-              <Route path="/admin/models/new" element={<ModelEditor />} />
-              <Route path="/admin/models/:id" element={<ModelEditor />} />
-              <Route path="/admin/breaking" element={<BreakingNewsList />} />
-              <Route path="/admin/daily-brief" element={<DailyBriefList />} />
-              <Route path="/admin/podcasts" element={<PodcastsList />} />
-              <Route path="/admin/podcasts/new" element={<PodcastEditor />} />
-              <Route path="/admin/podcasts/:id" element={<PodcastEditor />} />
-              <Route path="/admin/streams" element={<LiveStreamsList />} />
-              <Route path="/admin/streams/new" element={<LiveStreamEditor />} />
-              <Route path="/admin/streams/:id" element={<LiveStreamEditor />} />
-              <Route path="/admin/newsletter" element={<NewsletterSubscribers />} />
-              <Route path="/admin/newsletter/compose" element={<NewsletterCompose />} />
-              <Route path="/admin/team" element={<TeamManagement />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+
+              {/* Staff Portal */}
+              <Route path="/portal" element={<PortalAuth />} />
+              
+              {/* Admin Portal */}
+              <Route path="/portal/admin" element={<AdminPortalDashboard />} />
+              <Route path="/portal/admin/articles" element={<AdminArticlesList />} />
+              <Route path="/portal/admin/articles/*" element={<AdminArticlesList />} />
+              <Route path="/portal/admin/videos" element={<AdminVideosList />} />
+              <Route path="/portal/admin/videos/*" element={<AdminVideoEditor />} />
+              <Route path="/portal/admin/models" element={<AdminModelsList />} />
+              <Route path="/portal/admin/models/*" element={<AdminModelEditor />} />
+              <Route path="/portal/admin/breaking" element={<AdminBreakingNews />} />
+              <Route path="/portal/admin/daily-brief" element={<AdminDailyBrief />} />
+              <Route path="/portal/admin/podcasts" element={<AdminPodcastsList />} />
+              <Route path="/portal/admin/podcasts/*" element={<AdminPodcastEditor />} />
+              <Route path="/portal/admin/streams" element={<AdminStreamsList />} />
+              <Route path="/portal/admin/streams/*" element={<AdminStreamEditor />} />
+              <Route path="/portal/admin/newsletter" element={<AdminNewsletter />} />
+              <Route path="/portal/admin/newsletter/compose" element={<AdminNewsletterCompose />} />
+              <Route path="/portal/admin/team" element={<AdminTeam />} />
+
+              {/* Editor Portal */}
+              <Route path="/portal/editor" element={<EditorPortalDashboard />} />
+              <Route path="/portal/editor/articles" element={<EditorArticlesList />} />
+              <Route path="/portal/editor/articles/*" element={<EditorArticlesList />} />
+              <Route path="/portal/editor/videos" element={<EditorVideosList />} />
+              <Route path="/portal/editor/videos/*" element={<EditorVideoEditor />} />
+              <Route path="/portal/editor/models" element={<EditorModelsList />} />
+              <Route path="/portal/editor/models/*" element={<EditorModelEditor />} />
+              <Route path="/portal/editor/breaking" element={<EditorBreakingNews />} />
+              <Route path="/portal/editor/daily-brief" element={<EditorDailyBrief />} />
+              <Route path="/portal/editor/podcasts" element={<EditorPodcastsList />} />
+              <Route path="/portal/editor/podcasts/*" element={<EditorPodcastEditor />} />
+              <Route path="/portal/editor/streams" element={<EditorStreamsList />} />
+              <Route path="/portal/editor/streams/*" element={<EditorStreamEditor />} />
+              <Route path="/portal/editor/newsletter" element={<EditorNewsletter />} />
+              <Route path="/portal/editor/newsletter/compose" element={<EditorNewsletterCompose />} />
+
+              {/* Contributor Portal */}
+              <Route path="/portal/contributor" element={<ContributorDashboard />} />
+              <Route path="/portal/contributor/submissions" element={<ContributorSubmissions />} />
+              <Route path="/portal/contributor/pending" element={<ContributorPending />} />
+              <Route path="/portal/contributor/submit" element={<ContributorSubmit />} />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
