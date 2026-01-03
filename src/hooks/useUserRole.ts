@@ -35,11 +35,16 @@ export function useUserRole() {
 export function useHasEditorialAccess() {
   const { data: userRole, isLoading } = useUserRole();
 
+  const isAdmin = userRole?.role === "admin";
+  const isEditor = userRole?.role === "editor";
+  const isContributor = userRole?.role === "contributor";
+
   return {
-    hasAccess: userRole?.role === "admin" || userRole?.role === "editor",
-    isAdmin: userRole?.role === "admin",
-    isEditor: userRole?.role === "editor",
-    isContributor: userRole?.role === "contributor",
+    hasAccess: isAdmin || isEditor,
+    hasAnyRole: isAdmin || isEditor || isContributor,
+    isAdmin,
+    isEditor,
+    isContributor,
     role: userRole?.role ?? null,
     isLoading,
   };
