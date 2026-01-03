@@ -36,6 +36,7 @@ import LiveStreamsList from "./pages/admin/LiveStreamsList";
 import LiveStreamEditor from "./pages/admin/LiveStreamEditor";
 import NewsletterSubscribers from "./pages/admin/NewsletterSubscribers";
 import NewsletterCompose from "./pages/admin/NewsletterCompose";
+import TeamManagement from "./pages/admin/TeamManagement";
 import Unsubscribe from "./pages/Unsubscribe";
 import ConfirmNewsletter from "./pages/ConfirmNewsletter";
 
@@ -95,6 +96,7 @@ const App = () => (
               <Route path="/admin/streams/:id" element={<LiveStreamEditor />} />
               <Route path="/admin/newsletter" element={<NewsletterSubscribers />} />
               <Route path="/admin/newsletter/compose" element={<NewsletterCompose />} />
+              <Route path="/admin/team" element={<TeamManagement />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

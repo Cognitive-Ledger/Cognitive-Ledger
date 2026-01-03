@@ -4,7 +4,7 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useDailyBrief } from "@/hooks/useArticles";
 import { useHasEditorialAccess } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2, X, Check, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,7 +34,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -45,12 +44,17 @@ interface BriefItemInput {
 
 export default function DailyBriefList() {
   const { data: dailyBrief, isLoading } = useDailyBrief();
-  const { isAdmin } = useHasEditorialAccess();
+  const { isAdmin, hasAccess } = useHasEditorialAccess();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [items, setItems] = useState<BriefItemInput[]>([{ id: crypto.randomUUID(), content: "" }]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Inline editing state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const addItem = () => {
     setItems([...items, { id: crypto.randomUUID(), content: "" }]);
@@ -138,6 +142,61 @@ export default function DailyBriefList() {
     }
   };
 
+  // Inline editing handlers
+  const startEditing = (id: string, content: string) => {
+    setEditingId(id);
+    setEditingContent(content);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditingContent("");
+  };
+
+  const saveEdit = async () => {
+    if (!editingId || !editingContent.trim()) {
+      toast({
+        title: "Error",
+        description: "Content cannot be empty",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSavingEdit(true);
+    const { error } = await supabase
+      .from("daily_brief_items")
+      .update({ content: editingContent.trim() })
+      .eq("id", editingId);
+
+    setIsSavingEdit(false);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update item",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Item updated successfully",
+      });
+      setEditingId(null);
+      setEditingContent("");
+      queryClient.invalidateQueries({ queryKey: ["daily-brief"] });
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      saveEdit();
+    } else if (e.key === "Escape") {
+      cancelEditing();
+    }
+  };
+
   return (
     <>
       <Helmet>
@@ -220,7 +279,7 @@ export default function DailyBriefList() {
                   <TableRow>
                     <TableHead className="w-16">Order</TableHead>
                     <TableHead>Content</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-right w-32">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -229,35 +288,86 @@ export default function DailyBriefList() {
                       <TableCell className="font-mono">
                         {item.order_index}
                       </TableCell>
-                      <TableCell>{item.content}</TableCell>
-                      <TableCell className="text-right">
-                        {isAdmin && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Delete Daily Brief Item
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete this item?
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDelete(item.id)}
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                      <TableCell>
+                        {editingId === item.id ? (
+                          <Input
+                            value={editingContent}
+                            onChange={(e) => setEditingContent(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            autoFocus
+                            className="w-full"
+                          />
+                        ) : (
+                          <span 
+                            className="cursor-pointer hover:text-primary transition-colors"
+                            onDoubleClick={() => hasAccess && startEditing(item.id, item.content)}
+                          >
+                            {item.content}
+                          </span>
                         )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {editingId === item.id ? (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={saveEdit}
+                                disabled={isSavingEdit}
+                              >
+                                <Check className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={cancelEditing}
+                                disabled={isSavingEdit}
+                              >
+                                <X className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              {hasAccess && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => startEditing(item.id, item.content)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {isAdmin && (
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>
+                                        Delete Daily Brief Item
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete this item?
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => handleDelete(item.id)}
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
