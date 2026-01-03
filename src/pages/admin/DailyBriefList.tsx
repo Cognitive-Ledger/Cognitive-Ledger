@@ -4,7 +4,7 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useDailyBrief } from "@/hooks/useArticles";
 import { useHasEditorialAccess } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,46 +38,73 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
+interface BriefItemInput {
+  id: string;
+  content: string;
+}
+
 export default function DailyBriefList() {
   const { data: dailyBrief, isLoading } = useDailyBrief();
   const { isAdmin } = useHasEditorialAccess();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [newContent, setNewContent] = useState("");
-  const [orderIndex, setOrderIndex] = useState(0);
+  const [items, setItems] = useState<BriefItemInput[]>([{ id: crypto.randomUUID(), content: "" }]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const addItem = () => {
+    setItems([...items, { id: crypto.randomUUID(), content: "" }]);
+  };
+
+  const removeItem = (id: string) => {
+    if (items.length > 1) {
+      setItems(items.filter((item) => item.id !== id));
+    }
+  };
+
+  const updateItem = (id: string, content: string) => {
+    setItems(items.map((item) => (item.id === id ? { ...item, content } : item)));
+  };
 
   const handleCreate = async () => {
-    if (!newContent.trim()) {
+    const validItems = items.filter((item) => item.content.trim());
+    if (validItems.length === 0) {
       toast({
         title: "Error",
-        description: "Content is required",
+        description: "Add at least one item with content",
         variant: "destructive",
       });
       return;
     }
 
+    setIsSubmitting(true);
     const today = new Date().toISOString().split("T")[0];
+    const currentMaxOrder = dailyBrief?.length
+      ? Math.max(...dailyBrief.map((item) => item.order_index))
+      : -1;
 
-    const { error } = await supabase.from("daily_brief_items").insert({
-      content: newContent,
-      order_index: orderIndex,
+    const newItems = validItems.map((item, index) => ({
+      content: item.content.trim(),
+      order_index: currentMaxOrder + 1 + index,
       brief_date: today,
-    });
+    }));
+
+    const { error } = await supabase.from("daily_brief_items").insert(newItems);
+
+    setIsSubmitting(false);
 
     if (error) {
       toast({
         title: "Error",
-        description: "Failed to create daily brief item",
+        description: "Failed to create daily brief items",
         variant: "destructive",
       });
     } else {
       toast({
         title: "Success",
-        description: "Daily brief item created successfully",
+        description: `${newItems.length} item${newItems.length > 1 ? "s" : ""} added successfully`,
       });
-      setNewContent("");
-      setOrderIndex(0);
+      setItems([{ id: crypto.randomUUID(), content: "" }]);
       setIsDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["daily-brief"] });
     }
@@ -104,6 +131,13 @@ export default function DailyBriefList() {
     }
   };
 
+  const handleDialogClose = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      setItems([{ id: crypto.randomUUID(), content: "" }]);
+    }
+  };
+
   return (
     <>
       <Helmet>
@@ -118,39 +152,55 @@ export default function DailyBriefList() {
                 Today's date: {new Date().toLocaleDateString()}
               </p>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="w-4 h-4 mr-2" />
-                  Add Item
+                  Add Items
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Add Daily Brief Item</DialogTitle>
+                  <DialogTitle>Add Daily Brief Items</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div>
-                    <Label htmlFor="content">Content</Label>
-                    <Input
-                      id="content"
-                      value={newContent}
-                      onChange={(e) => setNewContent(e.target.value)}
-                      placeholder="Brief item content..."
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="order">Order Index</Label>
-                    <Input
-                      id="order"
-                      type="number"
-                      min={0}
-                      value={orderIndex}
-                      onChange={(e) => setOrderIndex(parseInt(e.target.value) || 0)}
-                    />
-                  </div>
-                  <Button onClick={handleCreate} className="w-full">
-                    Create
+                <div className="space-y-3 py-4">
+                  {items.map((item, index) => (
+                    <div key={item.id} className="flex gap-2 items-start">
+                      <span className="text-sm text-muted-foreground mt-2 w-6">
+                        {index + 1}.
+                      </span>
+                      <Input
+                        value={item.content}
+                        onChange={(e) => updateItem(item.id, e.target.value)}
+                        placeholder="Brief item content..."
+                        className="flex-1"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeItem(item.id)}
+                        disabled={items.length === 1}
+                        className="shrink-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    onClick={addItem}
+                    className="w-full"
+                    type="button"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Another Item
+                  </Button>
+                  <Button
+                    onClick={handleCreate}
+                    className="w-full"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Saving..." : `Save ${items.filter((i) => i.content.trim()).length || ""} Item${items.filter((i) => i.content.trim()).length !== 1 ? "s" : ""}`}
                   </Button>
                 </div>
               </DialogContent>
