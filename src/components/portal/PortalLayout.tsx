@@ -22,6 +22,8 @@ import {
   ClipboardCheck,
   Shield,
   ChevronLeft,
+  Settings,
+
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -43,6 +45,7 @@ const adminNavigation = [
   { name: "Daily Brief", href: "/portal/admin/daily-brief", icon: Calendar },
   { name: "Newsletter", href: "/portal/admin/newsletter", icon: Mail },
   { name: "Team", href: "/portal/admin/team", icon: Users },
+  { name: "Settings", href: "/portal/settings", icon: Settings },
 ];
 
 const editorNavigation = [
@@ -56,6 +59,7 @@ const editorNavigation = [
   { name: "Daily Brief", href: "/portal/editor/daily-brief", icon: Calendar },
   { name: "Newsletter", href: "/portal/editor/newsletter", icon: Mail },
   { name: "Review Queue", href: "/portal/editor/review", icon: ClipboardCheck },
+  { name: "Settings", href: "/portal/settings", icon: Settings },
 ];
 
 const contributorNavigation = [
@@ -63,6 +67,7 @@ const contributorNavigation = [
   { name: "My Submissions", href: "/portal/contributor/submissions", icon: FileText },
   { name: "Submit Article", href: "/portal/contributor/submit", icon: Send },
   { name: "Pending Review", href: "/portal/contributor/pending", icon: Clock },
+  { name: "Settings", href: "/portal/settings", icon: Settings },
 ];
 
 export function PortalLayout({ children, requiredRole = "any" }: PortalLayoutProps) {

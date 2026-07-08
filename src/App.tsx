@@ -34,6 +34,7 @@ import ContributorDashboard from "./pages/portal/contributor/ContributorDashboar
 import ContributorSubmissions from "./pages/portal/contributor/ContributorSubmissions";
 import ContributorPending from "./pages/portal/contributor/ContributorPending";
 import ContributorSubmit from "./pages/portal/contributor/ContributorSubmit";
+import PortalSettings from "./pages/portal/shared/PortalSettings";
 import {
   AdminVideosList, AdminVideoEditor, AdminModelsList, AdminModelEditor,
   AdminBreakingNews, AdminDailyBrief, AdminPodcastsList, AdminPodcastEditor,
@@ -82,6 +83,8 @@ const App = () => (
 
               {/* Staff Portal */}
               <Route path="/portal" element={<PortalAuth />} />
+              <Route path="/portal/settings" element={<PortalSettings />} />
+              
               
               {/* Admin Portal */}
               <Route path="/portal/admin" element={<AdminPortalDashboard />} />
