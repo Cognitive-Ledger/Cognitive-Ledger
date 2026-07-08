@@ -88,7 +88,9 @@ export default function PortalTeamManagement() {
       setIsDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
     } catch (error) {
-      toast.error("Failed to add team member");
+      console.error("Failed to add team member:", error);
+      const message = error instanceof Error ? error.message : "Failed to add team member";
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -105,7 +107,9 @@ export default function PortalTeamManagement() {
       setEditingMember(null);
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
     } catch (error) {
-      toast.error("Failed to update role");
+      console.error("Failed to update role:", error);
+      const message = error instanceof Error ? error.message : "Failed to update role";
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -118,7 +122,9 @@ export default function PortalTeamManagement() {
       toast.success("Team member removed");
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
     } catch (error) {
-      toast.error("Failed to remove team member");
+      console.error("Failed to remove team member:", error);
+      const message = error instanceof Error ? error.message : "Failed to remove team member";
+      toast.error(message);
     }
   };
 
