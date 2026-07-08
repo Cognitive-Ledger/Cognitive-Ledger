@@ -22,6 +22,8 @@ import {
   ClipboardCheck,
   Shield,
   ChevronLeft,
+  Settings,
+
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
