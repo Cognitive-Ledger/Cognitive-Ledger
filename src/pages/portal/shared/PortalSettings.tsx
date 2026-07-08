@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useHasEditorialAccess } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, User, Mail, Lock, Shield } from "lucide-react";
@@ -20,7 +20,7 @@ const nameSchema = z.string().trim().min(1, { message: "Name cannot be empty" })
 
 export default function PortalSettings() {
   const { user } = useAuth();
-  const { role } = useUserRole();
+  const { role } = useHasEditorialAccess();
 
   const [fullName, setFullName] = useState("");
   const [nameLoading, setNameLoading] = useState(false);
