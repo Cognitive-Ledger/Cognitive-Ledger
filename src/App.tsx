@@ -34,6 +34,7 @@ import ContributorDashboard from "./pages/portal/contributor/ContributorDashboar
 import ContributorSubmissions from "./pages/portal/contributor/ContributorSubmissions";
 import ContributorPending from "./pages/portal/contributor/ContributorPending";
 import ContributorSubmit from "./pages/portal/contributor/ContributorSubmit";
+import PortalSettings from "./pages/portal/shared/PortalSettings";
 import {
   AdminVideosList, AdminVideoEditor, AdminModelsList, AdminModelEditor,
   AdminBreakingNews, AdminDailyBrief, AdminPodcastsList, AdminPodcastEditor,
