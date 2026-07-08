@@ -133,13 +133,13 @@ export default function Subscribe() {
         // Create preferences
         const { error } = await supabase
           .from("notification_preferences")
-          .insert({ user_id: user.id, [key]: value });
+          .insert({ user_id: user.id, [key]: value } as any);
         if (error) throw error;
       } else {
         // Update preferences
         const { error } = await supabase
           .from("notification_preferences")
-          .update({ [key]: value })
+          .update({ [key]: value } as any)
           .eq("user_id", user.id);
         if (error) throw error;
       }
