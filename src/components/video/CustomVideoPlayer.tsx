@@ -89,7 +89,7 @@ export function CustomVideoPlayer({ src, title, poster, className, isLive = fals
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const ytPlayerRef = useRef<any>(null);
-  const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const playerContainerId = useRef(`yt-player-${Math.random().toString(36).substr(2, 9)}`);
 
   const isYouTube = isYouTubeUrl(src);

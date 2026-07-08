@@ -64,7 +64,7 @@ export function AIModelAssistant({ onModelFound }: AIModelAssistantProps) {
     setStage('searching');
 
     // Simulate progress stages
-    const stageTimers: NodeJS.Timeout[] = [];
+    const stageTimers: ReturnType<typeof setTimeout>[] = [];
     stageTimers.push(setTimeout(() => setStage('scraping'), 2000));
     stageTimers.push(setTimeout(() => setStage('analyzing'), 5000));
 
