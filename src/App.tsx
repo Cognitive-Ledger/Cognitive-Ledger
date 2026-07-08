@@ -83,6 +83,8 @@ const App = () => (
 
               {/* Staff Portal */}
               <Route path="/portal" element={<PortalAuth />} />
+              <Route path="/portal/settings" element={<PortalSettings />} />
+              
               
               {/* Admin Portal */}
               <Route path="/portal/admin" element={<AdminPortalDashboard />} />
