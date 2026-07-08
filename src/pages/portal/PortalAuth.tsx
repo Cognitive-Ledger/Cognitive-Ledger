@@ -110,36 +110,66 @@ export default function PortalAuth() {
 
       <div className="min-h-screen bg-background flex">
         {/* Left Panel - Branding */}
-        <div className="hidden lg:flex lg:w-1/2 bg-primary/5 items-center justify-center p-12">
-          <div className="max-w-md">
-            <div className="flex items-center gap-3 mb-8">
-              <Shield className="w-12 h-12 text-primary" />
+        <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center p-12 overflow-hidden bg-[#111111] text-[#FAFAF7]">
+          <div
+            className="absolute inset-0 opacity-[0.06]"
+            style={{
+              backgroundImage:
+                "linear-gradient(to right, #FAFAF7 1px, transparent 1px), linear-gradient(to bottom, #FAFAF7 1px, transparent 1px)",
+              backgroundSize: "48px 48px",
+            }}
+            aria-hidden
+          />
+          <div
+            className="absolute -top-32 -left-32 w-[420px] h-[420px] rounded-full blur-3xl opacity-20"
+            style={{ background: "radial-gradient(circle, #223344 0%, transparent 70%)" }}
+            aria-hidden
+          />
+
+          <div className="relative max-w-md w-full">
+            <div className="flex items-center gap-3 mb-16">
+              <div className="w-10 h-10 border border-[#FAFAF7]/30 flex items-center justify-center">
+                <Shield className="w-5 h-5 text-[#FAFAF7]" strokeWidth={1.5} />
+              </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Cognitive Ledger</h1>
-                <p className="text-sm text-muted-foreground">Staff Portal</p>
+                <p className="font-serif text-lg leading-none tracking-tight">Cognitive Ledger</p>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-[#FAFAF7]/50 mt-1">
+                  Staff Portal
+                </p>
               </div>
             </div>
-            <h2 className="text-3xl font-bold text-foreground mb-4">
-              Welcome to the Editorial Hub
-            </h2>
-            <p className="text-muted-foreground leading-relaxed">
-              Access your dashboard to manage content, review submissions, and collaborate with your team. 
-              This portal is exclusively for Cognitive Ledger staff members.
+
+            <p className="text-[11px] uppercase tracking-[0.25em] text-[#FAFAF7]/50 mb-6">
+              Editorial Access — Est. 2025
             </p>
-            <div className="mt-8 grid grid-cols-3 gap-4">
-              <div className="p-4 bg-background rounded-lg border border-border">
-                <p className="text-2xl font-bold text-primary">Admin</p>
-                <p className="text-xs text-muted-foreground">Full access</p>
-              </div>
-              <div className="p-4 bg-background rounded-lg border border-border">
-                <p className="text-2xl font-bold text-primary">Editor</p>
-                <p className="text-xs text-muted-foreground">Edit & publish</p>
-              </div>
-              <div className="p-4 bg-background rounded-lg border border-border">
-                <p className="text-2xl font-bold text-primary">Contributor</p>
-                <p className="text-xs text-muted-foreground">Submit content</p>
-              </div>
+            <h2 className="font-serif text-5xl leading-[1.05] tracking-tight mb-6">
+              The newsroom<br />behind the record.
+            </h2>
+            <div className="h-px w-16 bg-[#FAFAF7]/30 mb-6" />
+            <p className="text-[#FAFAF7]/70 leading-relaxed text-[15px] mb-14 max-w-sm">
+              A private workspace for the writers, editors, and stewards shaping
+              Cognitive Ledger's coverage of artificial intelligence.
+            </p>
+
+            <div className="border-t border-[#FAFAF7]/15">
+              {[
+                { role: "Administrators", detail: "Full editorial and operational oversight" },
+                { role: "Editors", detail: "Review, refine, and publish reporting" },
+                { role: "Contributors", detail: "Submit drafts and original research" },
+              ].map((item) => (
+                <div
+                  key={item.role}
+                  className="flex items-baseline justify-between py-4 border-b border-[#FAFAF7]/15"
+                >
+                  <span className="font-serif text-base">{item.role}</span>
+                  <span className="text-xs text-[#FAFAF7]/50 text-right ml-6">{item.detail}</span>
+                </div>
+              ))}
             </div>
+
+            <p className="mt-14 text-[11px] uppercase tracking-[0.2em] text-[#FAFAF7]/40">
+              Authorized personnel only
+            </p>
           </div>
         </div>
 
